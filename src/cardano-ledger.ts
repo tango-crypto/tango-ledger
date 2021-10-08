@@ -20,9 +20,6 @@ export class CardanoLedger extends EventEmitter {
 	private async onTransaction(msg: any) {
 		let tx: Transaction = msg.payload.record;
 		this.emit('transaction', tx);
-
-		let utxos = await this.dbClient.getTransactionUtxos(tx.hash);
-		this.emit('payments', utxos);
 	}
 
 
