@@ -1,5 +1,5 @@
 {
-  "name": "tango-ledger",
+  "name": "@tango-crypto/tango-ledger",
   "version": "0.0.1",
   "description": "Javascript access to cardano blockchain data",
   "main": "./dist/index.js",
@@ -9,6 +9,13 @@
     "prepublishOnly": "npm run build",
     "test": "mocha -r ts-node/register 'test/**/*.ts'",
     "postinstall": "tsc --outDir dist/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tango-crypto/tango-ledger.git"
+  },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com/"
   },
   "keywords": [
     "cardano",
