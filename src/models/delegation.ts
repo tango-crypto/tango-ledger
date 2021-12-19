@@ -1,10 +1,10 @@
 export interface Delegation {
-	pool_id: string,
-	raw_id: string,
-	url: string,
-	hash: string,
-	ticker?: string,
-	name?: string,
-	description?: string,
-	homepage?: string
+    id: number;
+    addr_id: number;
+    cer_index: number;
+    pool_hash_id: number;
+    active_epoch_no: number;
+    tx_id: number;
+    slot_no: number;
+    redeemer_id?: number;
 }

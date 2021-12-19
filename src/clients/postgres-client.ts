@@ -2,7 +2,7 @@ import { Knex, knex } from 'knex';
 import { Address } from '../models/address';
 import { Asset } from '../models/asset';
 import { Block } from '../models/block';
-import { Delegation } from '../models/delegation';
+import { Pool } from '../models/pool';
 import { Stake } from '../models/stake';
 import { Transaction } from '../models/transaction';
 
@@ -13,6 +13,8 @@ import Utils from "../utils";
 import { Metadata } from '../models/metadata';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { EpochParameters } from '../models/epoch-paramenters';
+import { PoolDelegation } from '../models/pool-delegation';
+import { Delegation } from '../models/delegation';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -363,7 +365,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw('COALESCE(reserve.reserves_sum, 0) as reserves_sum'),
 			this.knex.raw('COALESCE(treasury.treasury_sum, 0) as treasury_sum'),
 			this.knex.raw('COALESCE(reward.rewards_sum, 0) - COALESCE(wd.withdrawals_sum, 0) as withdraw_available'),
-			this.knex.raw(`(select "pool_hash"."view" from stake_address as sa inner join delegation del on del.addr_id = sa.id inner join pool_hash on pool_hash.id = del.pool_hash_id where "sa"."view" = 'stake_test1uzxpncx82vfkl5ml00ws44hzfdh64r22kr93e79jqsumv0q8g8cy0' order by del.active_epoch_no desc limit 1) as pool_id`),
+			this.knex.raw(`(select "pool_hash"."view" from stake_address as sa inner join delegation del on del.addr_id = sa.id inner join pool_hash on pool_hash.id = del.pool_hash_id where "sa"."view" = '${stakeAddress}' order by del.active_epoch_no desc limit 1) as pool_id`),
 		)
 		.from<Stake>({sa: 'stake_address'})
 		.leftJoin(this.knex.select(
@@ -435,18 +437,91 @@ export class PostgresClient implements DbClient {
 		.groupBy('tx_out.address');
 	}
 	
-	async getDelegation(poolId: string): Promise<Delegation> {
+	async getPool(poolId: string): Promise<Pool> {
 		return this.knex.select(
 			'pool_hash.view as pool_id',
 			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as raw_id`),
 			'pmd.url',
 			this.knex.raw(`encode(pmd.hash, 'hex') as hash`),
 		)
-		.from<Delegation>('pool_hash')
+		.from<Pool>('pool_hash')
 		.leftJoin({pmd: 'pool_metadata_ref'}, 'pmd.pool_id', 'pool_hash.id')
 		.where('pool_hash.view', '=', poolId)
 		.then(rows => rows[0]);
-	}	
+	}
+	
+	async getDelegations(poolId: string): Promise<PoolDelegation[]> {
+		return this.knex.with('delegations', 
+			this.knex.select(
+				'd.addr_id',
+				'd.tx_id',
+				'd.pool_hash_id',
+				'd.active_epoch_no',
+			)
+			.from({p: 'pool_hash'})
+			.innerJoin(this.knex.select(
+					this.knex.raw('distinct on (d.addr_id) d.*')
+				)
+				.from({d: 'delegation'})
+				.leftJoin(this.knex.select(
+						this.knex.raw('distinct on (sd.addr_id) sd.tx_id'),
+						'sd.addr_id'
+					)
+					.from({sd: 'stake_deregistration'})
+					.orderByRaw('sd.addr_id, sd.tx_id desc')
+					.as('sd'), pg => pg.on('sd.addr_id', 'd.addr_id')
+				)
+				.innerJoin({p: 'pool_hash'}, 'p.id', 'd.pool_hash_id')
+				.whereRaw('sd.addr_id is NULL or sd.tx_id < d.tx_id')
+				.orderByRaw('d.addr_id, d.tx_id desc')
+				.as('d'), pg => pg.on('d.pool_hash_id', 'p.id')
+			)
+			.where('p.view', '=', poolId)
+		)
+		.select(
+			this.knex.raw('s.view as stake_address'),
+			this.knex.raw('r.rewards - w.withdrawals as available_rewards'),
+			's.stake'
+		)
+		.from(this.knex.select(
+				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('COALESCE(SUM (r.amount), 0) as rewards'),
+			)
+			.from({d: 'delegations'})
+			.leftJoin({r: 'reward'}, pg => pg.on('r.pool_id', 'd.pool_hash_id').andOn(this.knex.raw('r.addr_id = d.addr_id and r.earned_epoch >= d.active_epoch_no + 1 and r.pool_id is not null')))
+			.groupByRaw('d.addr_id')
+			.as('r')
+		)
+		.innerJoin(this.knex.select(
+				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('COALESCE(SUM (w.amount), 0) as withdrawals')
+			)
+			.from({d: 'delegations'})
+			.leftJoin(this.knex.select(
+					'w.addr_id',
+					'w.amount',
+					'b.epoch_no'
+				)
+				.from({w: 'withdrawal'})
+				.innerJoin('tx', 'tx.id', 'w.tx_id')
+				.innerJoin('block', 'block.id', 'tx.block_id')
+				.as('w'), pg => pg.on('w.addr_id', 'd.addr_id').andOn(this.knex.raw('w.epoch_no >= d.active_epoch_no + 4'))
+			)
+			.groupByRaw('d.addr_id')
+			.as('w'), pg => pg.on('w.id', 'r.id')
+		)
+		.innerJoin(this.knex.select(
+				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('MAX(sa.view) as view'),
+				this.knex.raw('COALESCE(SUM(uv.value), 0) as stake')
+			)
+			.from({d: 'delegations'})
+			.innerJoin({sa: 'stake_address'}, 'sa.id', 'd.addr_id')
+			.leftJoin({uv: 'utxo_view'}, 'uv.stake_address_id', 'd.addr_id')
+			.groupBy('d.addr_id')
+			.as('s'), pg => pg.on('s.id', 'r.id')
+		);
+	}
 
 	async getAsset(identifier: string): Promise<Asset> {
 		return this.knex.select(
