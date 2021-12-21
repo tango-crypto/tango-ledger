@@ -2,16 +2,18 @@ import { Asset } from "./asset";
 import { Block } from "./block";
 
 export interface Transaction {
-	id?: number;
+	id: number;
 	hash: string;
-	block_id?: number;
+	block_id: number;
 	block_index: number;
 	out_sum: number;
 	fee: number;
 	deposit: number;
 	size: number;
 	invalid_before?: number;
-	invalid_hereafter: number;
+	invalid_hereafter?: number;
+	valid_contract: boolean;
+	script_size: number;
 	utxo_count?: number;
 	withdrawal_count?: number;
 	delegation_count?: number;

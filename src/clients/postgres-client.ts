@@ -137,8 +137,29 @@ export class PostgresClient implements DbClient {
 		.then(rows => ({...rows[0], confirmations: 1}))
 	}
 
+	async getBlockTransactions(id: number): Promise<Transaction[]> {
+		return this.knex.select(
+			'tx.id',
+			'tx.hash',
+			'tx.block_id',
+			'tx.block_index',
+			'tx.out_sum',
+			'tx.fee',
+			'tx.deposit',
+			'tx.size',
+			'tx.invalid_before',
+			'tx.invalid_hereafter',
+			'tx.valid_contract',
+			'tx.script_size'
+		)
+		.from<Transaction>('tx')
+		.where('tx.block_id', '=', id);
+	}
+
 	async getTransaction(txHash: string): Promise<Transaction> {
 		return this.knex.select(
+			'tx.id',
+			'tx.block_id',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'tx.block_index',
 			'tx.out_sum',
@@ -147,6 +168,8 @@ export class PostgresClient implements DbClient {
 			'tx.size',
 			'tx.invalid_before',
 			'tx.invalid_hereafter',
+			'tx.valid_contract',
+			'tx.script_size',
 			this.knex.raw(`(select count(*) from (select tx.id from tx_out where tx_out.tx_id = tx.id union all (select tx.id from tx_in where tx_in.tx_in_id = tx.id)) tx_count) as utxo_count`),
 			this.knex.raw(`(select count(*) from withdrawal where withdrawal.tx_id = tx.id) as withdrawal_count`),
 			this.knex.raw(`(select count(*) from delegation where delegation.tx_id = tx.id) as delegation_count`),
@@ -182,7 +205,9 @@ export class PostgresClient implements DbClient {
 			let assets: Asset[] = rows.map(r => ({quantity: r.asset_quantity, policy_id: r.asset_policy_id, asset_name: r.asset_name}))
 																.filter(a => a.policy_id);
 			let tx: Transaction = rows.length > 0 ? {
+				id: rows[0].id,
 				hash: rows[0].hash,
+				block_id: rows[0].block_id,
 				block_index: rows[0].block_index,
 				out_sum: rows[0].out_sum,
 				fee: rows[0].fee,
@@ -190,6 +215,8 @@ export class PostgresClient implements DbClient {
 				size: rows[0].size,
 				invalid_before: rows[0].invalid_before,
 				invalid_hereafter: rows[0].invalid_hereafter,
+				valid_contract: rows[0].valid_contract,
+				script_size: rows[0].script_size,
 				utxo_count: rows[0].utxo_count,
 				withdrawal_count: rows[0].withdrawal_count,
 				delegation_count: rows[0].delegation_count,
