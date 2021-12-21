@@ -17,6 +17,7 @@
     ]
   },
   "exclude": [
+    "tests",
     "dist",
     "node_modules"
   ]

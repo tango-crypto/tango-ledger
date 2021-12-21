@@ -500,7 +500,7 @@ export class PostgresClient implements DbClient {
 			.leftJoin(this.knex.select(
 					'w.addr_id',
 					'w.amount',
-					'b.epoch_no'
+					'block.epoch_no'
 				)
 				.from({w: 'withdrawal'})
 				.innerJoin('tx', 'tx.id', 'w.tx_id')
