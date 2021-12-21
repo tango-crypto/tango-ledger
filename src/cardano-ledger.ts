@@ -1,5 +1,5 @@
 import EventEmitter = require("events");
-import { Block } from "..";
+import { Block } from "./models/block";
 import { DbClient } from "./clients/db-client";
 import { Epoch } from "./models/epoch";
 import { Transaction } from "./models/transaction";

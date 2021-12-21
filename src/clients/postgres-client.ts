@@ -14,7 +14,6 @@ import { Metadata } from '../models/metadata';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { EpochParameters } from '../models/epoch-paramenters';
 import { PoolDelegation } from '../models/pool-delegation';
-import { Delegation } from '../models/delegation';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;

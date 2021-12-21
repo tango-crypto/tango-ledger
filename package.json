@@ -2,7 +2,8 @@
   "name": "@tango-crypto/tango-ledger",
   "version": "0.0.2",
   "description": "Javascript access to cardano blockchain data",
-  "main": "index.ts",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc --outDir dist/",
     "prepublishOnly": "npm run build",
