@@ -140,7 +140,7 @@ export class PostgresClient implements DbClient {
 	async getBlockTransactions(id: number): Promise<Transaction[]> {
 		return this.knex.select(
 			'tx.id',
-			'tx.hash',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'tx.block_id',
 			'tx.block_index',
 			'tx.out_sum',
