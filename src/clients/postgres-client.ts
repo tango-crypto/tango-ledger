@@ -192,7 +192,7 @@ export class PostgresClient implements DbClient {
 					'tx.id as tx_id', 
 					this.knex.raw(`SUM(asset.quantity) as quantity`),
 					this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-					this.knex.raw(`convert_from(asset.name, 'UTF-8') as name`),
+					this.knex.raw(`encode(asset.name, 'hex') as name`),
 				)
 				.from({utxo: 'tx_out'})
 				.innerJoin('tx', 'tx.id', 'utxo.tx_id')
@@ -244,7 +244,7 @@ export class PostgresClient implements DbClient {
 			'utxo.value',
 			'asset.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`convert_from(asset.name, 'UTF-8') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 		)
 		.from<Utxo>({utxo: 'tx_out'})
 		.innerJoin('tx', 'tx.id', 'utxo.tx_id')
@@ -257,7 +257,7 @@ export class PostgresClient implements DbClient {
 				'tx_out.value',
 				'asset.quantity',
 				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-				this.knex.raw(`convert_from(asset.name, 'UTF-8') as asset_name`)
+				this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 			)
 			.from<Utxo>('tx_in')
 			.innerJoin(this.knex.select(
@@ -294,7 +294,7 @@ export class PostgresClient implements DbClient {
 			'tx_out.value',
 			'asset.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`convert_from(asset.name, 'UTF-8') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 		)
 		.from<Utxo>('tx_in')
 		.innerJoin(this.knex.select(
@@ -329,7 +329,7 @@ export class PostgresClient implements DbClient {
 			'utxo_view.value',
 			'asset.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`convert_from(asset.name, 'UTF-8') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 		)
 		.from<Utxo>('utxo_view')
 		.innerJoin('stake_address', 'stake_address.id', 'utxo_view.stake_address_id')
@@ -372,7 +372,7 @@ export class PostgresClient implements DbClient {
 			'utxo_view.value',
 			'asset.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`convert_from(asset.name, 'UTF-8') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 		)
 		.from<Utxo>('utxo_view')
 		.innerJoin('stake_address', 'stake_address.id', 'utxo_view.stake_address_id')
