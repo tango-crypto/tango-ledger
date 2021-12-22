@@ -26,9 +26,15 @@ describe('block endpoints', function () {
     
     describe('blocks', function() {
 
-        it('it should return block transactions', async () => {
-            const blockId = 3377526;
-            const trannsactions = await client.getBlockTransactions(blockId);
+        it('should return block transactions by block id', async () => {
+            const blockId = 3379424;
+            const trannsactions = await client.getBlockTransactionsById(blockId);
+            expect(trannsactions.length).to.be.greaterThanOrEqual(0);
+        });
+
+        it('should return block transactions by block #', async () => {
+            const blockNo = 3174184;
+            const trannsactions = await client.getBlockTransactions(blockNo);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
     });

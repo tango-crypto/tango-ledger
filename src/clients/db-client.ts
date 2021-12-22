@@ -14,7 +14,8 @@ export interface DbClient {
 	isConnected(): boolean;
 	getBlock(id: number|string): Promise<Block>;
 	getLatestBlock(): Promise<Block>;
-	getBlockTransactions(id: number): Promise<Transaction[]>;
+	getBlockTransactionsById(block_id: number): Promise<Transaction[]>;
+	getBlockTransactions(block_no: number): Promise<Transaction[]>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
 	getTransactionMetadata(txHash: string): Promise<Metadata[]>;
 	getAddressUtxos(address: string): Promise<Utxo[]>;
