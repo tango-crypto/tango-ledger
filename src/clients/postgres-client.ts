@@ -507,14 +507,14 @@ export class PostgresClient implements DbClient {
 		.select(
 			this.knex.raw('s.view as stake_address'),
 			this.knex.raw('r.rewards - w.withdrawals as available_rewards'),
-			's.stake'
+			this.knex.raw('s.stake + (r.rewards - w.withdrawals) as stake')
 		)
 		.from(this.knex.select(
 				this.knex.raw('MAX(d.addr_id) as id'),
 				this.knex.raw('COALESCE(SUM (r.amount), 0) as rewards'),
 			)
 			.from({d: 'delegations'})
-			.leftJoin({r: 'reward'}, pg => pg.on('r.pool_id', 'd.pool_hash_id').andOn(this.knex.raw('r.addr_id = d.addr_id and r.earned_epoch >= d.active_epoch_no + 1 and r.pool_id is not null')))
+			.leftJoin({r: 'reward'}, pg => pg.on('r.addr_id', 'd.addr_id').andOn(this.knex.raw('r.pool_id is not null')))
 			.groupByRaw('d.addr_id')
 			.as('r')
 		)
@@ -531,7 +531,7 @@ export class PostgresClient implements DbClient {
 				.from({w: 'withdrawal'})
 				.innerJoin('tx', 'tx.id', 'w.tx_id')
 				.innerJoin('block', 'block.id', 'tx.block_id')
-				.as('w'), pg => pg.on('w.addr_id', 'd.addr_id').andOn(this.knex.raw('w.epoch_no >= d.active_epoch_no + 4'))
+				.as('w'), pg => pg.on('w.addr_id', 'd.addr_id')
 			)
 			.groupByRaw('d.addr_id')
 			.as('w'), pg => pg.on('w.id', 'r.id')
