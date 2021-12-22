@@ -137,7 +137,7 @@ export class PostgresClient implements DbClient {
 		.then(rows => ({...rows[0], confirmations: 1}))
 	}
 
-	async getBlockTransactions(id: number): Promise<Transaction[]> {
+	async getBlockTransactions(block_no: number): Promise<Transaction[]> {
 		return this.knex.select(
 			'tx.id',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
@@ -153,7 +153,7 @@ export class PostgresClient implements DbClient {
 			'tx.script_size'
 		)
 		.from<Transaction>('tx')
-		.where('tx.block_id', '=', id);
+		.where('tx.block_no', '=', block_no);
 	}
 
 	async getTransaction(txHash: string): Promise<Transaction> {
