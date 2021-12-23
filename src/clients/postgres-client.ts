@@ -487,17 +487,28 @@ export class PostgresClient implements DbClient {
 		.groupBy('tx_out.address');
 	}
 	
-	async getPool(poolId: string): Promise<Pool> {
-		return this.knex.select(
+	async getPool(poolId: string | number): Promise<Pool> {
+		let query = this.knex.select(
 			'pool_hash.view as pool_id',
 			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as raw_id`),
 			'pmd.url',
 			this.knex.raw(`encode(pmd.hash, 'hex') as hash`),
+			this.knex.raw('pod.json as data'),
 		)
 		.from<Pool>('pool_hash')
 		.leftJoin({pmd: 'pool_metadata_ref'}, 'pmd.pool_id', 'pool_hash.id')
-		.where('pool_hash.view', '=', poolId)
-		.then(rows => rows[0]);
+		.leftJoin({pod: 'pool_offline_data'}, 'pod.pool_id', 'pool_hash.id');
+		if (!Number.isNaN(Number(poolId))) {
+			query = query 
+			.where('pool_hash.id', '=', poolId);
+		} else {
+			query = query 
+			.where('pool_hash.view', '=', poolId);
+		}
+		return query.then(rows => {
+			const { data, ...cols } = rows[0];
+			return { ...cols, ...data};
+		});
 	}
 	
 	async getDelegations(poolId: string): Promise<PoolDelegation[]> {
