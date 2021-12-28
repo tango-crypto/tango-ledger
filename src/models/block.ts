@@ -1,3 +1,5 @@
+import { Pool } from "./pool";
+
 export interface Block {
 	id?: number;
 	hash: string;
@@ -20,4 +22,5 @@ export interface Block {
 	proto_minor?: number;
 	vrf_key?: string;
 	op_cert?: string;
+	pool?: Pool;
 }
