@@ -24,6 +24,7 @@ export interface DbClient {
 	getStake(stakeAddress: string): Promise<Stake>;
 	getStakeAddresses(stakeAddress: string): Promise<Address[]>;
 	getPool(poolId: string): Promise<Pool>;
+	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;
 	getDelegations(poolId: string): Promise<PoolDelegation[]>;
 	getEpochParamters(epoch: number): Promise<EpochParameters>;
 	registerEvent(event: string, args: any, callback: (msg: any) => void): void; // args should expect table_name, operation (INSERT|UPDATE ...) trigger config etc

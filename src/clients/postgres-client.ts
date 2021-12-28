@@ -53,7 +53,7 @@ export class PostgresClient implements DbClient {
 			'block.block_no',
 			'prev_block.block_no as previous_block',
 			'next_block.block_no as next_block',
-			'slot_leader.description as slot_leader',
+			'pool_hash.view as slot_leader',
 			'block.size',
 			'block.time',
 			'block.tx_count',
@@ -65,6 +65,7 @@ export class PostgresClient implements DbClient {
 		)
 		.from<Block>('block')
 		.leftJoin('slot_leader', 'slot_leader.id', 'block.slot_leader_id')
+		.leftJoin('pool_hash', 'pool_hash.id', 'slot_leader.pool_hash_id')
 		.leftJoin({prev_block: 'block'}, 'prev_block.id', 'block.previous_id')
 		.leftJoin({next_block: 'block'}, 'next_block.previous_id', 'block.id');
 		// .innerJoin('tx', 'tx.block_id', 'block.id');
@@ -505,6 +506,25 @@ export class PostgresClient implements DbClient {
 			query = query 
 			.where('pool_hash.view', '=', poolId);
 		}
+		return query.then(rows => {
+			const { data, ...cols } = rows[0];
+			return { ...cols, ...data};
+		});
+	}
+
+	async getPoolBySlotLeader(slot_leader_id: number): Promise<Pool> {
+		let query = this.knex.select(
+			'pool_hash.view as pool_id',
+			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as raw_id`),
+			'pmd.url',
+			this.knex.raw(`encode(pmd.hash, 'hex') as hash`),
+			this.knex.raw('pod.json as data'),
+		)
+		.from<Pool>('pool_hash')
+		.innerJoin({sl: 'slot_leader'}, 'sl.pool_hash_id', 'pool_hash.id')
+		.leftJoin({pmd: 'pool_metadata_ref'}, 'pmd.pool_id', 'pool_hash.id')
+		.leftJoin({pod: 'pool_offline_data'}, 'pod.pool_id', 'pool_hash.id')
+		.where('sl.id', '=', slot_leader_id);
 		return query.then(rows => {
 			const { data, ...cols } = rows[0];
 			return { ...cols, ...data};

@@ -30,21 +30,41 @@ describe('pool endpoints', function () {
         expect(delegations.length).to.be.greaterThanOrEqual(0);
     });
    
-    it('should return pool data by pool_hash', async () => {
+    it('should return pool by pool_hash', async () => {
         const poolId = 'pool1rnsw42f2q0u9fc32ttxy9l085n736jxz07lvwutz63wpyef03zh';
         const pool = await client.getPool(poolId);
         expect(pool.ticker).to.be.equal('KIWI');
         expect(pool.description).to.be.equal('The one and Only Kiwipool Staking. ITN OG. Freedom fighter to the end. #Liberty #Truth #Love. KIWI!')
     }) 
 
-    it('should return pool data by pool id', async () => {
+    it('should return pool by pool id', async () => {
         const poolId = 3673;
         const pool = await client.getPool(poolId);
         expect(pool.ticker).to.be.undefined;
         expect(pool.name).to.be.undefined;
         expect(pool.description).to.be.undefined
         expect(pool.homepage).to.be.undefined
-    })  
+    })
+    
+    it('should return pool by slot leader id', async () => {
+        // Arrange
+        const slotLeaderId = 2506020;
+        const id = 'pool1h55utk6kdv0hzcrfmsy4vlrtqp8un4cm8d4yntpfhvtag79smml';
+        const ticker = 'STACK';
+        const name = 'ADASTACK';
+        const homepage = 'https://adastack.net';
+        const description = 'ADASTACK (2 of 2)';
+
+        // Act
+        const pool = await client.getPoolBySlotLeader(slotLeaderId);
+
+        // Assert
+        expect(pool.pool_id).to.be.equal(id);
+        expect(pool.ticker).to.be.equal(ticker);
+        expect(pool.name).to.be.equal(name);
+        expect(pool.homepage).to.be.equal(homepage);
+        expect(pool.description).to.be.equal(description);
+    })
 
     after('close db', async () => {
         await client.disconnect();
