@@ -206,29 +206,36 @@ export class PostgresClient implements DbClient {
 			'block.epoch_no as block_epoch_no',
 			'block.block_no as block_block_no',
 			'block.slot_no as block_slot_no',
-			'asset.quantity as asset_quantity',
-			'asset.policy_id as asset_policy_id ',
-			'asset.name as asset_name',
+			'asset.quantity',
+			'asset.policy_id',
+			'asset.asset_name',
+			'asset.fingerprint',
 		)
 		.from<Transaction>('tx')
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.innerJoin(
 			this.knex.select(
 					'tx.id as tx_id', 
-					this.knex.raw(`SUM(asset.quantity) as quantity`),
+					this.knex.raw(`SUM(mto.quantity) as quantity`),
 					this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-					this.knex.raw(`encode(asset.name, 'hex') as name`),
+					this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+					'asset.fingerprint'
 				)
 				.from({utxo: 'tx_out'})
 				.innerJoin('tx', 'tx.id', 'utxo.tx_id')
-				.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'utxo.id')
+				.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo.id')
+				.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
 				.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-				.groupBy('tx.id', 'asset.policy', 'asset.name')
+				.groupBy('tx.id', 'asset.policy', 'asset.name', 'asset.fingerprint')
 				.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
 		)
 		.then(rows => {
-			let assets: Asset[] = rows.map(r => ({quantity: r.asset_quantity, policy_id: r.asset_policy_id, asset_name: r.asset_name}))
-																.filter(a => a.policy_id);
+			let assets: Asset[] = rows.map(r => ({
+				quantity: r.quantity, 
+				policy_id: r.policy_id, 
+				asset_name: Utils.convert(r.asset_name),
+				fingerprint: r.fingerprint
+			})).filter(a => a.policy_id);
 			let tx: Transaction = rows.length > 0 ? {
 				id: rows[0].id,
 				hash: rows[0].hash,
@@ -267,20 +274,25 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'utxo.index',
 			'utxo.value',
-			'asset.quantity',
+			this.knex.raw('utxo.address_has_script as smart_contract'),
+			'mto.quantity',
+			'asset.fingerprint',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 		)
 		.from<Utxo>({utxo: 'tx_out'})
 		.innerJoin('tx', 'tx.id', 'utxo.tx_id')
-		.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'utxo.id')
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo.id')
+		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
 		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 		.union(pg => pg.select(
 				'tx_out.address',
 				'tx_out.hash',
 				'tx_out.index',
 				'tx_out.value',
-				'asset.quantity',
+				this.knex.raw('tx_out.address_has_script as smart_contract'),
+				'mto.quantity',
+				'asset.fingerprint',
 				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 				this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
 			)
@@ -294,13 +306,14 @@ export class PostgresClient implements DbClient {
 				.as('tx_out'), pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index')
 			)
 			.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
-			.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'tx_out.id')
+			.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'tx_out.id')
+			.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
 			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 		)
 		.then(rows => {
 			let inputs: Utxo[] = [];
 			let outputs: Utxo[] = [];
-			rows.forEach(utxo => {
+			rows.forEach((utxo: Utxo) => {
 				if (utxo.hash != txHash) {
 					inputs.push(utxo);
 				} else {
@@ -317,9 +330,11 @@ export class PostgresClient implements DbClient {
 			'tx_out.hash',
 			'tx_out.index',
 			'tx_out.value',
-			'asset.quantity',
+			this.knex.raw('tx_out.address_has_script as smart_contract'),
+			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			'asset.fingerprint'
 		)
 		.from<Utxo>('tx_in')
 		.innerJoin(this.knex.select(
@@ -331,7 +346,8 @@ export class PostgresClient implements DbClient {
 			.as('tx_out'), pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index')
 		)
 		.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
-		.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'tx_out.id')
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'tx_out.id')
+		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
 		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
@@ -352,14 +368,17 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'utxo_view.index',
 			'utxo_view.value',
-			'asset.quantity',
+			this.knex.raw('utxo_view.address_has_script as smart_contract'),
+			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			'asset.fingerprint'
 		)
 		.from<Utxo>('utxo_view')
 		.innerJoin('stake_address', 'stake_address.id', 'utxo_view.stake_address_id')
 		.innerJoin('tx', 'tx.id', 'utxo_view.tx_id')
-		.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'utxo_view.id')
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo_view.id')
+		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
 		.where('utxo_view.address', '=', address)
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
@@ -395,15 +414,19 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'utxo_view.index',
 			'utxo_view.value',
-			'asset.quantity',
+			this.knex.raw('utxo_view.address_has_script as smart_contract'),
+			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			'asset.fingerprint'
 		)
 		.from<Utxo>('utxo_view')
 		.innerJoin('stake_address', 'stake_address.id', 'utxo_view.stake_address_id')
 		.innerJoin('tx', 'tx.id', 'utxo_view.tx_id')
-		.leftJoin({asset: 'ma_tx_out'}, 'asset.tx_out_id', 'utxo_view.id')
-		.where('stake_address.view', '=', stakeAddress);
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo_view.id')
+		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
+		.where('stake_address.view', '=', stakeAddress)
+		.then(rows => rows.map(r => ({ ...r, asset_name: Utils.convert(r.asset_name)})));
 	}
 
 	async getStake(stakeAddress: string): Promise<Stake> {
@@ -507,6 +530,7 @@ export class PostgresClient implements DbClient {
 			.where('pool_hash.view', '=', poolId);
 		}
 		return query.then(rows => {
+			if (rows.length == 0) return null;
 			const { data, ...cols } = rows[0];
 			return { ...cols, ...data};
 		});
@@ -526,6 +550,7 @@ export class PostgresClient implements DbClient {
 		.leftJoin({pod: 'pool_offline_data'}, 'pod.pool_id', 'pool_hash.id')
 		.where('sl.id', '=', slot_leader_id);
 		return query.then(rows => {
+			if (rows.length == 0) return null;
 			const { data, ...cols } = rows[0];
 			return { ...cols, ...data};
 		});
@@ -606,24 +631,26 @@ export class PostgresClient implements DbClient {
 
 	async getAsset(identifier: string): Promise<Asset> {
 		return this.knex.select(
-			this.knex.raw(`encode(ma_tx_mint.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(ma_tx_mint.name, 'hex') as asset_name`),
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			'asset.fingerprint',
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
 			this.knex.raw(`count(*) as mint_or_burn_count`),
-			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id where ma_tx_mint.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma_tx_mint.name = decode('${identifier.substring(56)}', 'hex') order by tx.id asc limit 1) as initial_mint_tx_hash`),
-			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id where ma_tx_mint.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma_tx_mint.name = decode('${identifier.substring(56)}', 'hex') limit 1) as on_chain_metadata`),
+			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') order by tx.id asc limit 1) as initial_mint_tx_hash`),
+			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') limit 1) as on_chain_metadata`)
 		)
 		.from<Asset>('ma_tx_mint')
-		.whereRaw(`ma_tx_mint.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma_tx_mint.name = decode('${identifier.substring(56)}', 'hex')`)
-		.groupBy('ma_tx_mint.policy', 'ma_tx_mint.name')
+		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'ma_tx_mint.ident')
+		.whereRaw(`asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`)
+		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
 		.then((rows: any[]) => {
 			if (rows.length > 0) {
 				let {on_chain_metadata, ...asset}: Asset = rows[0];
-				let assetFingerprint  = new AssetFingerprint(
-					Buffer.from(asset.policy_id, 'hex'),
-					Buffer.from(asset.asset_name, 'hex')
-				);
-				asset.fingerprint = assetFingerprint.fingerprint();
+				// let assetFingerprint  = new AssetFingerprint(
+				// 	Buffer.from(asset.policy_id, 'hex'),
+				// 	Buffer.from(asset.asset_name, 'hex')
+				// );
+				// asset.fingerprint = assetFingerprint.fingerprint();
 				if (on_chain_metadata) {
 					let { key, ...json } = on_chain_metadata;
 					asset.metadata = {label: key, json};

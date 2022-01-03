@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { PostgresClient } from '../../src/clients/postgres-client';
+import { PostgresClient } from '../src/clients/postgres-client';
 
 const db_host = '54.215.96.227';
 const db_port = 6543;
@@ -9,6 +9,7 @@ const db_name = 'testnet';
 let client: PostgresClient = null;
 
 describe('pool endpoints', function () {
+    this.timeout(5000); 
 
     before('connecto to db-sync', async () => {
         client = new PostgresClient({
@@ -38,17 +39,14 @@ describe('pool endpoints', function () {
     }) 
 
     it('should return pool by pool id', async () => {
-        const poolId = 3673;
+        const poolId = 36730980324023;
         const pool = await client.getPool(poolId);
-        expect(pool.ticker).to.be.undefined;
-        expect(pool.name).to.be.undefined;
-        expect(pool.description).to.be.undefined
-        expect(pool.homepage).to.be.undefined
+        expect(pool).to.be.null;
     })
     
     it('should return pool by slot leader id', async () => {
         // Arrange
-        const slotLeaderId = 2506020;
+        const slotLeaderId = 2484328;
         const id = 'pool1h55utk6kdv0hzcrfmsy4vlrtqp8un4cm8d4yntpfhvtag79smml';
         const ticker = 'STACK';
         const name = 'ADASTACK';

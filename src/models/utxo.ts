@@ -5,8 +5,10 @@ export interface Utxo {
 	hash: string;
 	index: number;
 	value: number;
+	smart_contract: boolean;
 	quantity?: number;
 	policy_id?: string;
 	asset_name?: string;
+	fingerprint?: string;
 	assets?: Asset[];
 }

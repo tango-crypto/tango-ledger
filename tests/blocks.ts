@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { PostgresClient } from '../../src/clients/postgres-client';
+import { PostgresClient } from '../src/clients/postgres-client';
 
 const db_host = '54.215.96.227';
 const db_port = 6543;
@@ -9,6 +9,7 @@ const db_name = 'testnet';
 let client: PostgresClient = null;
 
 describe('block endpoints', function () {
+    this.timeout(5000); 
 
     before('connecto to db-sync', async () => {
         client = new PostgresClient({
