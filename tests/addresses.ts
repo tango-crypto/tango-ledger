@@ -30,7 +30,7 @@ describe('address endpoints', function () {
         const address = 'addr_test1qz64dptgdaceda97vmdhguz88s54qzwwe5lxfyrtz3n52p37lhlvxx6nd442cph2avszquujnsz4rqh33zynzhhy5uvsz6mt86';
 
         // act
-        const txs = await client.getAddressTransactions(address);
+        const txs = await client.getAddressTransactions(address, 10, 2872884);
 
         // assert
         expect(txs).not.null;

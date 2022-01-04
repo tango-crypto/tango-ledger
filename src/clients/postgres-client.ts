@@ -383,10 +383,10 @@ export class PostgresClient implements DbClient {
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
-	async getAddressTransactions(address: string, order: string = 'asc'): Promise<Transaction[]> {
-		return this.knex.select(
+	async getAddressTransactions(address: string, size = 50, blockNumber: number = -1, order: string = 'desc'): Promise<Transaction[]> {
+		let query = this.knex.select(
 			'tx.block_index',
-			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),	
 			'block.block_no',
 		)
 		.from<Transaction>('tx')
@@ -403,9 +403,19 @@ export class PostgresClient implements DbClient {
 		.innerJoin('tx_out', 'tx_out.tx_id', 'tx_in.tx_out_id')
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.whereRaw('tx_in.tx_out_index = tx_out.index')
-		.andWhere('tx_out.address', '=', address))
-		.orderBy('block_no', order)
-		.then((rows: any) => rows);
+		.andWhere('tx_out.address', '=', address));
+		if (blockNumber >= 0) {
+			const operator = order == 'desc' ? '<' : '>';
+			query = this.knex.select('q.*')
+			.from({q: query as any})
+			.where('q.block_no', operator, blockNumber)
+			.orderBy('q.block_no', order)
+
+		} else {
+			query = query
+			.orderBy('block_no', order)
+		}
+		return query.limit(size).then((rows: any) => rows);
 	}
 
 	async getStakeUtxos(stakeAddress: string): Promise<Utxo[]> {
