@@ -2,7 +2,7 @@ import { Utxo } from "../models/utxo";
 
 const Utils = {
 	groupUtxoAssets: function(utxos: Utxo[]) {
-		let groups = utxos.reduce((acc: {[key: string]: Utxo}, curr) => { 
+		const groups = utxos.reduce((acc: {[key: string]: Utxo}, curr) => { 
 			const key = `${curr.address}.${curr.hash}.${curr.index}`;
 			if (!acc[key]) {
 				acc[key] = {

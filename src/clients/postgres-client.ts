@@ -11,7 +11,6 @@ import { DbClient } from "./db-client";
 
 import Utils from "../utils";
 import { Metadata } from '../models/metadata';
-import AssetFingerprint from '@emurgo/cip14-js';
 import { EpochParameters } from '../models/epoch-paramenters';
 import { PoolDelegation } from '../models/pool-delegation';
 
@@ -69,7 +68,7 @@ export class PostgresClient implements DbClient {
 		.leftJoin({prev_block: 'block'}, 'prev_block.id', 'block.previous_id')
 		.leftJoin({next_block: 'block'}, 'next_block.previous_id', 'block.id');
 		// .innerJoin('tx', 'tx.block_id', 'block.id');
-		let numberOrHash = Number(id); 
+		const numberOrHash = Number(id); 
 		if (Number.isNaN(numberOrHash)) {
 			query = query
 			.innerJoin(this.knex.select(
@@ -230,13 +229,13 @@ export class PostgresClient implements DbClient {
 				.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
 		)
 		.then(rows => {
-			let assets: Asset[] = rows.map(r => ({
+			const assets: Asset[] = rows.map(r => ({
 				quantity: r.quantity, 
 				policy_id: r.policy_id, 
 				asset_name: Utils.convert(r.asset_name),
 				fingerprint: r.fingerprint
 			})).filter(a => a.policy_id);
-			let tx: Transaction = rows.length > 0 ? {
+			const tx: Transaction = rows.length > 0 ? {
 				id: rows[0].id,
 				hash: rows[0].hash,
 				block_id: rows[0].block_id,
@@ -311,8 +310,8 @@ export class PostgresClient implements DbClient {
 			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 		)
 		.then(rows => {
-			let inputs: Utxo[] = [];
-			let outputs: Utxo[] = [];
+			const inputs: Utxo[] = [];
+			const outputs: Utxo[] = [];
 			rows.forEach((utxo: Utxo) => {
 				if (utxo.hash != txHash) {
 					inputs.push(utxo);
@@ -383,7 +382,7 @@ export class PostgresClient implements DbClient {
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
-	async getAddressTransactions(address: string, size = 50, blockNumber: number = -1, order: string = 'desc'): Promise<Transaction[]> {
+	async getAddressTransactions(address: string, size = 50, blockNumber = -1, order = 'desc'): Promise<Transaction[]> {
 		let query = this.knex.select(
 			'tx.block_index',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),	
@@ -547,7 +546,7 @@ export class PostgresClient implements DbClient {
 	}
 
 	async getPoolBySlotLeader(slot_leader_id: number): Promise<Pool> {
-		let query = this.knex.select(
+		const query = this.knex.select(
 			'pool_hash.view as pool_id',
 			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as raw_id`),
 			'pmd.url',
@@ -655,14 +654,14 @@ export class PostgresClient implements DbClient {
 		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
 		.then((rows: any[]) => {
 			if (rows.length > 0) {
-				let {on_chain_metadata, ...asset}: Asset = rows[0];
+				const {on_chain_metadata, ...asset}: Asset = rows[0];
 				// let assetFingerprint  = new AssetFingerprint(
 				// 	Buffer.from(asset.policy_id, 'hex'),
 				// 	Buffer.from(asset.asset_name, 'hex')
 				// );
 				// asset.fingerprint = assetFingerprint.fingerprint();
 				if (on_chain_metadata) {
-					let { key, ...json } = on_chain_metadata;
+					const { key, ...json } = on_chain_metadata;
 					asset.metadata = {label: key, json};
 				} else {
 					asset.metadata = null;
@@ -713,7 +712,7 @@ export class PostgresClient implements DbClient {
 		.then((connection: any) => {
 			connection.query(`LISTEN ${event}`);
 			connection.on('notification', async (msg: {channel: string, payload: string}) => {
-				let payloadJson = JSON.parse(msg.payload);
+				const payloadJson = JSON.parse(msg.payload);
 				callback({ ...msg, payload: payloadJson});
 			});
 		});
