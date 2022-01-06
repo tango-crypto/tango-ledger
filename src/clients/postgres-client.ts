@@ -382,7 +382,7 @@ export class PostgresClient implements DbClient {
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
-	async getAddressTransactions(address: string, size = 50, order = 'desc', txId: number = 0): Promise<Transaction[]> {
+	async getAddressTransactions(address: string, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
 		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
 		return this.knex.with('t', pg => pg.union(
 			pg => pg.select('tx_out.tx_id')
@@ -403,6 +403,7 @@ export class PostgresClient implements DbClient {
 			.orderBy('tx_id', order)
 			.limit(size)
 		).select(
+			'tx.id',
 			'txs.input',
 			'txs.i0', 
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`), 
@@ -449,10 +450,10 @@ export class PostgresClient implements DbClient {
 		.orderByRaw(`tx.id ${order}, txs.i0, txs.o0`)
 		.then(rows => {
 			const dict = rows.reduce((dict: any, r: any) => {
-				dict[r.hash] = (dict[r.hash] || {hash: r.hash, block: {block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time}, fees: r.fee, out_sum: r.out_sum, inputs:  [], outputs:  []});
+				dict[r.hash] = (dict[r.hash] || {id: r.id, hash: r.hash, block: {block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time}, fees: r.fee, out_sum: r.out_sum, inputs: [], outputs: []});
 				if (r['i0']) {
 					!dict[r.hash].inputs.push(r.input)
-				};
+				}
 				if (r['o0']) {
 					!dict[r.hash].outputs.push(r.output)
 				}
