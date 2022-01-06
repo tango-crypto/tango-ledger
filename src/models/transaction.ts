@@ -1,5 +1,6 @@
 import { Asset } from "./asset";
 import { Block } from "./block";
+import { Utxo } from "./utxo";
 
 export interface Transaction {
 	id: number;
@@ -30,4 +31,6 @@ export interface Transaction {
 	asset_policy_id?: string, 
 	asset_name?: string,
 	assets?: Asset[];
+	inputs?: Utxo[];
+	outputs?: Utxo[];
 }

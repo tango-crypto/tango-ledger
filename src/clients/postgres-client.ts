@@ -382,39 +382,84 @@ export class PostgresClient implements DbClient {
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
-	async getAddressTransactions(address: string, size = 50, blockNumber = -1, order = 'desc'): Promise<Transaction[]> {
-		let query = this.knex.select(
-			'tx.block_index',
-			this.knex.raw(`encode(tx.hash, 'hex') as hash`),	
+	async getAddressTransactions(address: string, size = 50, order = 'desc', txId: number = 0): Promise<Transaction[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		return this.knex.with('t', pg => pg.union(
+			pg => pg.select('tx_out.tx_id')
+				.from('tx_out')
+				.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
+				.groupBy('tx_out.tx_id')
+				.orderBy('tx_out.tx_id', order)
+				.limit(size), true
+			)
+			.union(pg => pg.select(this.knex.raw('tx_in.tx_in_id as tx_id'))
+				.from('tx_out')
+				.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+				.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_in.tx_in_id ' + seekExpr : ''}`)
+				.groupBy('tx_in.tx_in_id')
+				.orderBy('tx_in.tx_in_id', order)
+				.limit(size)
+			, true)
+			.orderBy('tx_id', order)
+			.limit(size)
+		).select(
+			'txs.input',
+			'txs.i0', 
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`), 
+			'txs.o0', 
+			'txs.output', 
 			'block.block_no',
+			'block.epoch_no',
+			'block.epoch_slot_no', 
+			'block.time', 
+			'tx.fee', 
+			'tx.out_sum'
 		)
-		.from<Transaction>('tx')
+		.from('tx')
 		.innerJoin('block', 'block.id', 'tx.block_id')
-		.innerJoin('tx_out', 'tx_out.tx_id', 'tx.id')
-		.where('tx_out.address', '=', address)
-		.union(pg => pg.select(
-			'tx.block_index',
-			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
-			'block.block_no',
+		.innerJoin(
+			this.knex.select(
+				this.knex.raw('i.address as input'), 
+				this.knex.raw('i.rn as i0'), 
+				this.knex.raw('case when i.tx_id is null then o.tx_id else i.tx_id end'), 
+				this.knex.raw('o.rn as o0'), 
+				this.knex.raw('o.address as output')
+			)
+			.from({o: this.knex.select(
+					this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`), 
+					't.tx_id', 
+					'tx_out.address'
+				)
+				.from('t')
+				.innerJoin('tx_out', 'tx_out.tx_id', 't.tx_id') as any}
+			)
+			.fullOuterJoin(
+				this.knex.select(
+					this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`), 
+					't.tx_id', 
+					'tx_out.address'
+				)
+				.from('t')
+				.innerJoin('tx_in', 'tx_in.tx_in_id', 't.tx_id')
+				.innerJoin('tx_out', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+				.as('i'), pg => pg.on('o.tx_id', 'i.tx_id').andOn('o.rn', 'i.rn')
+			)
+			.as('txs'), pg => pg.on('txs.tx_id', 'tx.id')
 		)
-		.from<Transaction>('tx')
-		.innerJoin('tx_in', 'tx_in.tx_in_id', 'tx.id')
-		.innerJoin('tx_out', 'tx_out.tx_id', 'tx_in.tx_out_id')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.whereRaw('tx_in.tx_out_index = tx_out.index')
-		.andWhere('tx_out.address', '=', address));
-		if (blockNumber >= 0) {
-			const operator = order == 'desc' ? '<' : '>';
-			query = this.knex.select('q.*')
-			.from({q: query as any})
-			.where('q.block_no', operator, blockNumber)
-			.orderBy('q.block_no', order)
-
-		} else {
-			query = query
-			.orderBy('block_no', order)
-		}
-		return query.limit(size).then((rows: any) => rows);
+		.orderByRaw(`tx.id ${order}, txs.i0, txs.o0`)
+		.then(rows => {
+			const dict = rows.reduce((dict: any, r: any) => {
+				dict[r.hash] = (dict[r.hash] || {hash: r.hash, block: {block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time}, fees: r.fee, out_sum: r.out_sum, inputs:  [], outputs:  []});
+				if (r['i0']) {
+					!dict[r.hash].inputs.push(r.input)
+				};
+				if (r['o0']) {
+					!dict[r.hash].outputs.push(r.output)
+				}
+				return dict;
+			}, {});
+			return Object.values(dict);
+		});
 	}
 
 	async getStakeUtxos(stakeAddress: string): Promise<Utxo[]> {

@@ -19,7 +19,7 @@ export interface DbClient {
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
 	getTransactionMetadata(txHash: string): Promise<Metadata[]>;
 	getAddressUtxos(address: string): Promise<Utxo[]>;
-	getAddressTransactions(address: string, size: number, blockNumber: number, order: string): Promise<Transaction[]>;
+	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;
 	getStakeAddresses(stakeAddress: string): Promise<Address[]>;
