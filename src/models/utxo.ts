@@ -1,6 +1,7 @@
 import { Asset } from "./asset";
 
 export interface Utxo {
+	tx_id?: number;
 	address: string;
 	hash?: string;
 	index?: number;

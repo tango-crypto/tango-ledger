@@ -6,6 +6,7 @@ const Utils = {
 			const key = `${curr.address}.${curr.hash}.${curr.index}`;
 			if (!acc[key]) {
 				acc[key] = {
+					tx_id: curr.tx_id,
 					address: curr.address,
 					hash: curr.hash,
 					index: curr.index,

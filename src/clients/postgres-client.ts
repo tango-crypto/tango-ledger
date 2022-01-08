@@ -361,24 +361,135 @@ export class PostgresClient implements DbClient {
 		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 	}
 
-	async getAddressUtxos(address: string): Promise<Utxo[]> {
+	async getAddressTransactionsTotal(address: string): Promise<number> {
 		return this.knex.select(
-			'address',
+			this.knex.raw('SUM(t.total) as total')
+		)
+		.from({t: this.knex.select(
+				this.knex.raw('count(DISTINCT tx_out.tx_id) as total')
+			)
+			.from('tx_out')
+			.where('tx_out.address', '=', address)
+			.unionAll(pg => pg.select(
+					this.knex.raw('count(DISTINCT tx_in.tx_in_id) as total')
+				)
+				.from('tx_out')
+				.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+				.where('tx_out.address', '=', address)
+			) as any
+		}).then((rows: any[]) => rows[0].total);
+	}
+
+	async getAddressBalance(address: string): Promise<number> {
+		// select
+		// 	SUM(value) as balance
+		// from tx_out
+		// left join tx_in on tx_out.tx_id = tx_in.tx_out_id and tx_out.index = tx_in.tx_out_index
+		// where tx_in.tx_in_id is NULL
+		// and tx_out.address = 'addr_test1wrsexavz37208qda7mwwu4k7hcpg26cz0ce86f5e9kul3hqzlh22t'
+		// 
+		// or 
+		//
+		// select
+		// 	SUM(value) as balance
+		// from tx_out
+		// where tx_out.address = '${address}'
+		// and not exists (
+		// 	select 1 from tx_in
+		// 	where tx_out.tx_id = tx_in.tx_out_id and tx_out.index = tx_in.tx_out_index
+		// )
+
+		return this.knex.select(
+			this.knex.raw('SUM(value) as balance')
+		)
+		.from('tx_out')
+		.whereNotExists(this.knex.select(
+				this.knex.raw('1')
+			)
+			.from('tx_in')
+			.whereRaw('tx_out.tx_id = tx_in.tx_out_id and tx_out.index = tx_in.tx_out_index')
+		)
+		.andWhere('tx_out.address', '=', address)
+		.then((rows: any[]) => rows[0].balance);
+	}
+
+	async getAddressAssets(address: string): Promise<Asset[]> {
+		return this.knex.select(
+			this.knex.raw(`SUM(mto.quantity) as quantity`),
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			this.knex.raw(`MAX(asset.fingerprint) as fingerprint`)
+		)
+		.from({mto: 'ma_tx_out'})
+		.innerJoin(
+			this.knex.select(
+				'tx_out.id', 
+				'tx_out.tx_id', 
+				'tx_out.index', 
+				'tx_out.value'
+			)
+			.from('tx_out')
+			.leftJoin('tx_in', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+			.whereRaw(`tx_in.tx_in_id is null and tx_out.address = '${address}'`)
+			.as('t'), pg => pg.on('mto.tx_out_id', 't.id')
+		)
+		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
+		.whereRaw('asset.policy is not null')
+		.groupByRaw('asset.policy, asset.name')
+		.then((rows: any[]) => rows.map(r => ({...r, asset_name: Utils.convert(r.asset_name)})))
+		// return this.knex.raw(`
+
+		// SELECT 
+		// 	SUM("mto"."quantity") as quantity,
+		// 	ENCODE(ASSET.POLICY,'hex') AS POLICY_ID,
+		// 	convert_from(ASSET.NAME,'utf8') AS ASSET_NAME,
+		// 	MAX("asset"."fingerprint") as fingerprint
+		// FROM ma_tx_out as mto
+		// INNER JOIN (
+		// 	select tx_out.id, tx_out.tx_id, tx_out.index, tx_out.value from tx_out
+		// 	lEFT JOIN tx_in on tx_out.tx_id = tx_in.tx_out_id and tx_out.index = tx_in.tx_out_index
+		// 	WHERE 
+		// 	tx_in.tx_in_id is null
+		// 	and	"tx_out"."address" = '${address}'
+		// ) t on mto.tx_out_id = t.id
+		// INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "mto"."ident"
+		// WHERE asset.policy is not null
+		// group by asset.policy, asset.name
+		// `);
+	}
+
+	async getAddressUtxos(address: string, size = 50, order = 'desc', txId = 0): Promise<Utxo[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		return this.knex.with('t',
+			this.knex.select(
+				this.knex.raw('DISTINCT(tx_out.tx_id) as tx_id'), 
+				'tx_out.id', 
+				'tx_out.index', 
+				'tx_out.value', 
+				this.knex.raw('tx_out.address_has_script as smart_contract'), 
+				'tx_out.address'
+			)
+			.from('tx_out')
+			.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
+			.orderBy('tx_out.tx_id', order)
+			.limit(size)
+		)
+		.select(
+			't.tx_id',
+			't.address',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
-			'utxo_view.index',
-			'utxo_view.value',
-			this.knex.raw('utxo_view.address_has_script as smart_contract'),
+			't.index',
+			't.value',
+			't.smart_contract',
 			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
 			'asset.fingerprint'
 		)
-		.from<Utxo>('utxo_view')
-		.innerJoin('stake_address', 'stake_address.id', 'utxo_view.stake_address_id')
-		.innerJoin('tx', 'tx.id', 'utxo_view.tx_id')
-		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo_view.id')
+		.from<Utxo>('tx')
+		.innerJoin('t', 'tx.id', 't.tx_id')
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 't.id')
 		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
-		.where('utxo_view.address', '=', address)
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
@@ -465,6 +576,7 @@ export class PostgresClient implements DbClient {
 
 	async getStakeUtxos(stakeAddress: string): Promise<Utxo[]> {
 		return this.knex.select(
+			'tx.id',
 			'address',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'utxo_view.index',

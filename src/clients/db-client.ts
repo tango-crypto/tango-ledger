@@ -7,6 +7,7 @@ import { Address } from "../models/address";
 import { Metadata } from "../models/metadata";
 import { EpochParameters } from "../models/epoch-paramenters";
 import { PoolDelegation } from "../models/pool-delegation";
+import { Asset } from "../models/asset";
 
 export interface DbClient {
 	reconnect(): void;
@@ -18,7 +19,10 @@ export interface DbClient {
 	getBlockTransactions(block_no: number): Promise<Transaction[]>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
 	getTransactionMetadata(txHash: string): Promise<Metadata[]>;
-	getAddressUtxos(address: string): Promise<Utxo[]>;
+	getAddressTransactionsTotal(address: string): Promise<number>;
+	getAddressBalance(address: string): Promise<number>;
+	getAddressAssets(address: string): Promise<Asset[]>;
+	getAddressUtxos(address: string, size: number, order: string, txId: number): Promise<Utxo[]>;
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;
