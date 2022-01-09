@@ -470,7 +470,8 @@ export class PostgresClient implements DbClient {
 				'tx_out.address'
 			)
 			.from('tx_out')
-			.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
+			.leftJoin('tx_in', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+			.whereRaw(`tx_in.tx_in_id is NULL and tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
 			.orderBy('tx_out.tx_id', order)
 			.limit(size)
 		)
