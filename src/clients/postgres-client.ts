@@ -137,6 +137,21 @@ export class PostgresClient implements DbClient {
 		.then(rows => ({...rows[0], confirmations: 1}))
 	}
 
+	async getLatestBlockTip(): Promise<Block> {
+		return this.knex.select(
+			'block.id',
+			'block.block_no',
+			'block.slot_no',
+			'block.epoch_slot_no',
+			'block.epoch_no',
+		)
+		.from<Block>('block')
+		.whereRaw('block.block_no is not null')
+		.orderBy('block.block_no', 'desc')
+		.limit(1)
+		.then(rows => ({...rows[0], confirmations: 1}))
+	}
+
 	async getBlockTransactionsById(block_id: number): Promise<Transaction[]> {
 		return this.knex.select(
 			'tx.id',

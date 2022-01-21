@@ -38,6 +38,15 @@ describe('block endpoints', function () {
             const trannsactions = await client.getBlockTransactions(blockNo);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
+
+        it('should return latest block tip (no join data)', async () => {
+            try {
+                const block = await client.getLatestBlockTip();
+                expect(block.block_no).to.be.greaterThan(1);
+            } catch(err) {
+                console.log(err);
+            }
+        })
     });
 
     after('close db', async () => {
