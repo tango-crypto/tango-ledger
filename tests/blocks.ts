@@ -41,8 +41,8 @@ describe('block endpoints', function () {
 
         it('should return latest block tip (no join data)', async () => {
             try {
-                const block = await client.getLatestBlockTip();
-                expect(block.block_no).to.be.greaterThan(1);
+                const block_no = await client.getLatestBlockTip();
+                expect(block_no).to.be.greaterThan(1);
             } catch(err) {
                 console.log(err);
             }
