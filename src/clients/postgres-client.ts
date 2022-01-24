@@ -139,13 +139,13 @@ export class PostgresClient implements DbClient {
 
 	async getLatestBlockTip(): Promise<number> {
 		return this.knex.select(
-			'block.block_no',
+			'block.block_no as block_no',
 		)
 		.from<Block>('block')
 		.whereRaw('block.block_no is not null')
 		.orderBy('block.block_no', 'desc')
 		.limit(1)
-		.then(rows => rows[0])
+		.then(rows => rows[0].block_no)
 	}
 
 	async getBlockTransactionsById(block_id: number): Promise<Transaction[]> {
@@ -280,12 +280,12 @@ export class PostgresClient implements DbClient {
 
 	async getTransactionTip(txHash: string): Promise<number> {
 		return this.knex.select(
-			'block.block_no as block_block_no',
+			'block.block_no as block_no',
 		)
 		.from<Transaction>('tx')
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-		.then(rows => rows[0]);
+		.then(rows => rows[0].block_no);
 	}
 
 	async getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}> {
