@@ -285,7 +285,7 @@ export class PostgresClient implements DbClient {
 		.from<Transaction>('tx')
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-		.then(rows => rows[0].block_no);
+		.then(rows => rows[0]?.block_no);
 	}
 
 	async getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}> {
