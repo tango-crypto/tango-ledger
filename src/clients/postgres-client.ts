@@ -99,6 +99,20 @@ export class PostgresClient implements DbClient {
 		return query.then(rows => rows[0]);
 	}
 
+	async getBlockTip(id: number|string): Promise<number> {
+		let query = this.knex.select(
+			'block.block_no as block_no',
+		)
+		.from<Block>('block')
+		const numberOrHash = Number(id); 
+		if (Number.isNaN(numberOrHash)) {
+			query = query.whereRaw(`block.hash = decode('${id}', 'hex')`)
+		} else {
+			query = query.where('block.id', '=', id)
+		}
+		return query.then(rows => rows[0]?.block_no);
+	}
+
 	async getLatestBlock(): Promise<Block> {
 		return this.knex.select(
 			'block.id',
