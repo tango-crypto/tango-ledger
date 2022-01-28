@@ -292,14 +292,19 @@ export class PostgresClient implements DbClient {
 		});
 	}
 
-	async getTransactionTip(txHash: string): Promise<number> {
-		return this.knex.select(
+	async getTransactionTip(id: number | string): Promise<number> {
+		let query = this.knex.select(
 			'block.block_no as block_no',
 		)
 		.from<Transaction>('tx')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-		.then(rows => rows[0]?.block_no);
+		.innerJoin('block', 'block.id', 'tx.block_id');
+		const numberOrHash = Number(id); 
+		if (Number.isNaN(numberOrHash)) {
+			query = query.whereRaw(`tx.hash = decode('${id}', 'hex')`)
+		} else {
+			query = query.where('tx.id', '=', id)
+		}
+		return query.then(rows => rows[0]?.block_no);
 	}
 
 	async getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}> {
