@@ -181,13 +181,9 @@ export class PostgresClient implements DbClient {
 		.where('tx.block_id', '=', block_id);
 	}
 
-	async getBlockTransactions(block_no: number): Promise<Transaction[]> {
-		return this.knex.with('b',
-			this.knex.select('id')
-			.from('block')
-			.where('block.block_no', '=', block_no)
-		)
-		.select(
+	async getBlockTransactions(block_no: number, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		return this.knex.select(
 			'tx.id',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'tx.block_id',
@@ -202,7 +198,10 @@ export class PostgresClient implements DbClient {
 			'tx.script_size'
 		)
 		.from<Transaction>('tx')
-		.innerJoin('b', 'tx.block_id', 'b.id');
+		.innerJoin('block', 'tx.block_id', 'block.id')
+		.whereRaw(`block.block_no = ${block_no}${seekExpr ? ' and tx.id ' + seekExpr : ''}`)
+		.orderBy('tx.id', order)
+		.limit(size);
 	}
 
 	async getTransaction(txHash: string): Promise<Transaction> {

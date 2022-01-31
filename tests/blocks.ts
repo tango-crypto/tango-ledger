@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { PostgresClient } from '../src/clients/postgres-client';
 
-const db_host = '54.215.96.227';
-const db_port = 6543;
-const db_user = 'cardano';
+const db_host = 'localhost';
+const db_port = 5432;
+const db_user = 'leo';
 const db_pwd = 'kraken!';
 const db_name = 'testnet';
 let client: PostgresClient = null;
@@ -17,9 +17,8 @@ describe('block endpoints', function () {
                 host: db_host,
                 port: db_port,
                 user: db_user,
-                password: db_pwd,
+                // password: db_pwd,
                 database: db_name,
-                ssl: {rejectUnauthorized: false}
             },
             debug: true
         });
@@ -35,7 +34,7 @@ describe('block endpoints', function () {
 
         it('should return block transactions by block #', async () => {
             const blockNo = 3174184;
-            const trannsactions = await client.getBlockTransactions(blockNo);
+            const trannsactions = await client.getBlockTransactions(blockNo, 4, 'asc', 2670018);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
 
