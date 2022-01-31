@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { PostgresClient } from '../src/clients/postgres-client';
 
-const db_host = '54.215.96.227';
-const db_port = 6543;
-const db_user = 'cardano';
+const db_host = 'localhost';
+const db_port = 5432;
+const db_user = 'leo';
 const db_pwd = 'kraken!';
 const db_name = 'testnet';
 let client: PostgresClient = null;
@@ -17,9 +17,7 @@ describe('stake endpoints', function () {
                 host: db_host,
                 port: db_port,
                 user: db_user,
-                password: db_pwd,
                 database: db_name,
-                ssl: {rejectUnauthorized: false}
             },
             debug: true
         });
@@ -34,6 +32,18 @@ describe('stake endpoints', function () {
 
         // assert
         expect(utxos).not.null;
+      
+    });
+
+    it('should get stake addresses', async () => {
+        // arrange
+        const stakeAddress = 'stake_test1urtt0tpxwxyll6gclxnz5srjx3zjr099pgrqkd3st7339tcr0u0ph';
+
+        // act
+        const addresses = await client.getStakeAddresses(stakeAddress, 4, 'desc', 58574, 0);
+
+        // assert
+        expect(addresses.length).to.be.greaterThanOrEqual(0);
       
     });
 
