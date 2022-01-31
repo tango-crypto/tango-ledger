@@ -764,8 +764,9 @@ export class PostgresClient implements DbClient {
 		});
 	}
 	
-	async getDelegations(poolId: string): Promise<PoolDelegation[]> {
-		return this.knex.with('delegations', 
+	async getDelegations(poolId: string, size = 50, order = 'desc', txId = 0): Promise<PoolDelegation[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		const query = this.knex.with('delegations', 
 			this.knex.select(
 				'd.addr_id',
 				'd.tx_id',
@@ -774,7 +775,10 @@ export class PostgresClient implements DbClient {
 			)
 			.from({p: 'pool_hash'})
 			.innerJoin(this.knex.select(
-					this.knex.raw('distinct on (d.addr_id) d.*')
+					this.knex.raw('distinct on (d.addr_id) d.addr_id'),
+					'd.tx_id',
+					'd.pool_hash_id',
+					'd.active_epoch_no'
 				)
 				.from({d: 'delegation'})
 				.leftJoin(this.knex.select(
@@ -790,7 +794,9 @@ export class PostgresClient implements DbClient {
 				.orderByRaw('d.addr_id, d.tx_id desc')
 				.as('d'), pg => pg.on('d.pool_hash_id', 'p.id')
 			)
-			.where('p.view', '=', poolId)
+			.whereRaw(`p.view = '${poolId}'${seekExpr ? ' and d.tx_id ' + seekExpr : ''}`)
+			.orderBy('d.tx_id', order)
+			.limit(size)
 		)
 		.select(
 			this.knex.raw('s.view as stake_address'),
@@ -835,6 +841,10 @@ export class PostgresClient implements DbClient {
 			.groupBy('d.addr_id')
 			.as('s'), pg => pg.on('s.id', 'r.id')
 		);
+
+		console.log(query.toString());
+
+		return query.then((rws: any[]) => rws);
 	}
 
 	async getAsset(identifier: string): Promise<Asset> {
