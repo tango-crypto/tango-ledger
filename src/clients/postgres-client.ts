@@ -766,7 +766,7 @@ export class PostgresClient implements DbClient {
 	
 	async getDelegations(poolId: string, size = 50, order = 'desc', txId = 0): Promise<PoolDelegation[]> {
 		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
-		const query = this.knex.with('delegations', 
+		return this.knex.with('delegations', 
 			this.knex.select(
 				'd.addr_id',
 				'd.tx_id',
@@ -799,21 +799,22 @@ export class PostgresClient implements DbClient {
 			.limit(size)
 		)
 		.select(
+			'r.tx_id',
 			this.knex.raw('s.view as stake_address'),
 			this.knex.raw('r.rewards - w.withdrawals as available_rewards'),
 			this.knex.raw('s.stake + (r.rewards - w.withdrawals) as stake')
 		)
 		.from(this.knex.select(
-				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('d.tx_id'),
 				this.knex.raw('COALESCE(SUM (r.amount), 0) as rewards'),
 			)
 			.from({d: 'delegations'})
 			.leftJoin({r: 'reward'}, pg => pg.on('r.addr_id', 'd.addr_id').andOn(this.knex.raw('r.pool_id is not null')))
-			.groupByRaw('d.addr_id')
+			.groupByRaw('d.tx_id')
 			.as('r')
 		)
 		.innerJoin(this.knex.select(
-				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('d.tx_id'),
 				this.knex.raw('COALESCE(SUM (w.amount), 0) as withdrawals')
 			)
 			.from({d: 'delegations'})
@@ -827,24 +828,22 @@ export class PostgresClient implements DbClient {
 				.innerJoin('block', 'block.id', 'tx.block_id')
 				.as('w'), pg => pg.on('w.addr_id', 'd.addr_id')
 			)
-			.groupByRaw('d.addr_id')
-			.as('w'), pg => pg.on('w.id', 'r.id')
+			.groupByRaw('d.tx_id')
+			.as('w'), pg => pg.on('w.tx_id', 'r.tx_id')
 		)
 		.innerJoin(this.knex.select(
-				this.knex.raw('MAX(d.addr_id) as id'),
+				this.knex.raw('d.tx_id'),
 				this.knex.raw('MAX(sa.view) as view'),
 				this.knex.raw('COALESCE(SUM(uv.value), 0) as stake')
 			)
 			.from({d: 'delegations'})
 			.innerJoin({sa: 'stake_address'}, 'sa.id', 'd.addr_id')
 			.leftJoin({uv: 'utxo_view'}, 'uv.stake_address_id', 'd.addr_id')
-			.groupBy('d.addr_id')
-			.as('s'), pg => pg.on('s.id', 'r.id')
-		);
-
-		console.log(query.toString());
-
-		return query.then((rws: any[]) => rws);
+			.groupBy('d.tx_id')
+			.as('s'), pg => pg.on('s.tx_id', 'r.tx_id')
+		)
+		.orderBy('r.tx_id', order)
+		.then((rows: any[]) => rows);
 	}
 
 	async getAsset(identifier: string): Promise<Asset> {
