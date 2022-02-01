@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import { PostgresClient } from '../src/clients/postgres-client';
 
-const db_host = '54.215.96.227';
-const db_port = 6543;
-const db_user = 'cardano';
-const db_pwd = 'kraken!';
+const db_host = 'localhost';
+const db_port = 5432;
+const db_user = 'leo';
+// const db_pwd = 'kraken!';
 const db_name = 'testnet';
 let client: PostgresClient = null;
 
@@ -17,9 +17,8 @@ describe('address endpoints', function () {
                 host: db_host,
                 port: db_port,
                 user: db_user,
-                password: db_pwd,
+                // password: db_pwd,
                 database: db_name,
-                ssl: {rejectUnauthorized: false}
             },
             debug: true
         });
@@ -33,6 +32,18 @@ describe('address endpoints', function () {
         const txs = await client.getAddressTransactions(address);
         // assert
         expect(txs).not.null;
+    })
+
+    it('should get address assets', async () => {
+        // arrange
+        const address = 'addr_test1wrsexavz37208qda7mwwu4k7hcpg26cz0ce86f5e9kul3hqzlh22t';
+
+        // act
+        const assets = await client.getAddressAssets(address, 10, 'desc', 'asset1y92pll80kekqe9kf0rczt79cm7j0tyzs5nd09j');
+
+        // assert
+        expect(assets).not.null;
+       
     })
 
     after('closing connection', async () => {

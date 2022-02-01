@@ -26,7 +26,7 @@ export interface DbClient {
 	getTransactionMetadata(txHash: string): Promise<Metadata[]>;
 	getAddressTransactionsTotal(address: string): Promise<number>;
 	getAddressBalance(address: string): Promise<number>;
-	getAddressAssets(address: string): Promise<Asset[]>;
+	getAddressAssets(address: string, size: number, order: string, fingerprint: string): Promise<Asset[]>;
 	getAddressUtxos(address: string, size: number, order: string, txId: number): Promise<Utxo[]>;
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;

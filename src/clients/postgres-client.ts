@@ -452,12 +452,13 @@ export class PostgresClient implements DbClient {
 		.then((rows: any[]) => rows[0].balance);
 	}
 
-	async getAddressAssets(address: string): Promise<Asset[]> {
+	async getAddressAssets(address: string, size = 50, order = 'desc', fingerprint = ''): Promise<Asset[]> {
+		const seekExpr = fingerprint ? order == 'asc' ? `> '${fingerprint}'` : `< '${fingerprint}'`: '';
 		return this.knex.select(
 			this.knex.raw(`SUM(mto.quantity) as quantity`),
-			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-			this.knex.raw(`MAX(asset.fingerprint) as fingerprint`)
+			this.knex.raw(`MAX(encode(asset.policy, 'hex')) as policy_id`),
+			this.knex.raw(`MAX(encode(asset.name, 'hex')) as asset_name`),
+			this.knex.raw(`asset.fingerprint`)
 		)
 		.from({mto: 'ma_tx_out'})
 		.innerJoin(
@@ -473,8 +474,10 @@ export class PostgresClient implements DbClient {
 			.as('t'), pg => pg.on('mto.tx_out_id', 't.id')
 		)
 		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
-		.whereRaw('asset.policy is not null')
-		.groupByRaw('asset.policy, asset.name')
+		.whereRaw(`asset.policy is not null${seekExpr ? ' and asset.fingerprint ' + seekExpr : ''}`)
+		.groupBy('asset.fingerprint')
+		.orderBy('asset.fingerprint', order)
+		.limit(size)
 		.then((rows: any[]) => rows.map(r => ({...r, asset_name: Utils.convert(r.asset_name)})))
 		// return this.knex.raw(`
 
