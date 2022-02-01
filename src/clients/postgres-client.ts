@@ -604,7 +604,7 @@ export class PostgresClient implements DbClient {
 		.orderByRaw(`tx.id ${order}, txs.i0, txs.o0`)
 		.then(rows => {
 			const dict = rows.reduce((dict: any, r: any) => {
-				dict[r.hash] = (dict[r.hash] || {id: r.id, hash: r.hash, block: {block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time}, fees: r.fee, out_sum: r.out_sum, inputs: [], outputs: []});
+				dict[r.hash] = (dict[r.hash] || {id: r.id, hash: r.hash, block: {block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time}, fee: r.fee, out_sum: r.out_sum, inputs: [], outputs: []});
 				if (r['i0']) {
 					!dict[r.hash].inputs.push(r.input)
 				}
