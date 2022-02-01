@@ -708,30 +708,17 @@ export class PostgresClient implements DbClient {
 		.then(rows => rows[0]);
 	}
 
-	async getStakeAddresses(stakeAddress: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Address[]> {
-		const seekExpr = (fieldTxId: string, fieldIndex: string, order: string) => txId <= 0 ? '' : 
-		order == 'asc' ? `${fieldTxId} > ${txId} OR (${fieldTxId} = ${txId} AND ${fieldIndex} > ${index})` : 
-		`${fieldTxId} < ${txId} OR (${fieldTxId} = ${txId} AND ${fieldIndex} < ${index})`;
+	async getStakeAddresses(stakeAddress: string, size = 50, order = 'desc', address = ''): Promise<Address[]> {
+		const seekExpr = address ? order == 'asc' ? `> '${address}'` : `< '${address}'`: '';
 		return this.knex.select(
-			'a.tx_id',
-			'a.index',
-			'a.address'
+			this.knex.raw('DISTINCT (tx_out.address) as address'),
 		)
-		.from(
-			this.knex.select(
-				this.knex.raw('MAX(tx_out.tx_id) as tx_id'),
-				this.knex.raw('MAX(tx_out.index) as index'),
-				'tx_out.address',
-			)
-			.from<Address>('tx_out')
-			.innerJoin({sa: 'stake_address'}, 'tx_out.stake_address_id', 'sa.id')
-			.where('sa.view', '=', stakeAddress)
-			.groupBy('tx_out.address')
-			.as('a')
-			)
-		.whereRaw(`${seekExpr('a.tx_id', 'a.index', order)}`)
-		.orderByRaw(`a.tx_id ${order}, a.index ${order}`)
-		.limit(size);
+		.from<Address>('tx_out')
+		.innerJoin({sa: 'stake_address'}, 'tx_out.stake_address_id', 'sa.id')
+		.whereRaw(`sa.view = '${stakeAddress}'${seekExpr ? ' and tx_out.address ' + seekExpr : ''}`)
+		.orderBy('tx_out.address', order)
+		.limit(size)
+		.then((rows: any[]) => rows);
 	}
 	
 	async getPool(poolId: string | number): Promise<Pool> {

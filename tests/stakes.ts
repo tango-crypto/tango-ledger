@@ -40,7 +40,7 @@ describe('stake endpoints', function () {
         const stakeAddress = 'stake_test1urtt0tpxwxyll6gclxnz5srjx3zjr099pgrqkd3st7339tcr0u0ph';
 
         // act
-        const addresses = await client.getStakeAddresses(stakeAddress, 4, 'desc', 58574, 0);
+        const addresses = await client.getStakeAddresses(stakeAddress, 40, 'desc', 'addr_test1qrfukqypvy4efts3jy4x0xvcrz406g3z00f8w570kmky2vkkk7kzvuvfll5337dx9fq8ydz9yx722zsxpvmrqharz2hscvtazf');
 
         // assert
         expect(addresses.length).to.be.greaterThanOrEqual(0);

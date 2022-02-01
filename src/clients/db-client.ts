@@ -31,7 +31,7 @@ export interface DbClient {
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;
-	getStakeAddresses(stakeAddress: string, size: number, order: string, txId: number, index: number): Promise<Address[]>;
+	getStakeAddresses(stakeAddress: string, size: number, order: string, address: string): Promise<Address[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;
 	getDelegations(poolId: string, size: number, order: string, txId: number): Promise<PoolDelegation[]>;
