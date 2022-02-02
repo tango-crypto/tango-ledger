@@ -35,10 +35,10 @@ describe('pool endpoints', function () {
     });
    
     it('should return pool by pool_hash', async () => {
-        const poolId = 'pool1rnsw42f2q0u9fc32ttxy9l085n736jxz07lvwutz63wpyef03zh';
+        const poolId = 'pool1cr8vpy3ta3smcxjq8hfu8n2chxhtc78ukfruqjhfgarf5azypen';
         const pool = await client.getPool(poolId);
-        expect(pool.ticker).to.be.equal('KIWI');
-        expect(pool.description).to.be.equal('The one and Only Kiwipool Staking. ITN OG. Freedom fighter to the end. #Liberty #Truth #Love. KIWI!')
+        expect(pool.ticker).to.be.equal('LEAD');
+        expect(pool.description).to.be.equal('LEAD your Computer Science and Fintech Specialist - LEADing the way to a decentralisied future.')
     }) 
 
     it('should return pool by pool id', async () => {

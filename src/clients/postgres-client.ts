@@ -730,14 +730,20 @@ export class PostgresClient implements DbClient {
 	async getPool(poolId: string | number): Promise<Pool> {
 		let query = this.knex.select(
 			'pool_hash.view as pool_id',
-			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as raw_id`),
-			'pmd.url',
-			this.knex.raw(`encode(pmd.hash, 'hex') as hash`),
-			this.knex.raw('pod.json as data'),
+			this.knex.raw(`encode(pool_hash.hash_raw, 'hex') as id`),
+			'pu.pledge',
+			'pu.margin',
+			'pu.fixed_cost',
+			'pu.active_epoch_no',
+			this.knex.raw('first_value (pmr.url) over(order by case when pmr.url is null then 0 else pu.registered_tx_id end desc) as url'),
+			this.knex.raw(`first_value (encode(pmr.hash,'hex')) over(order by case when pmr.hash is null then 0 else pu.registered_tx_id end desc) as hash`),
+			this.knex.raw('first_value (pod.json) over(order by case when pod.json is null then 0 else "pu"."registered_tx_id" end desc) as data'),
 		)
-		.from<Pool>('pool_hash')
-		.leftJoin({pmd: 'pool_metadata_ref'}, 'pmd.pool_id', 'pool_hash.id')
-		.leftJoin({pod: 'pool_offline_data'}, 'pod.pool_id', 'pool_hash.id');
+		.from<Pool>({pu: 'pool_update'})
+		.innerJoin('pool_hash', 'pool_hash.id', 'pu.hash_id')
+		.innerJoin('epoch', 'epoch.no', 'pu.active_epoch_no')
+		.leftJoin({pmr: 'pool_metadata_ref'}, 'pmr.id', 'pu.meta_id')
+		.leftJoin({pod: 'pool_offline_data'}, 'pod.pmr_id', 'pmr.id');
 		if (!Number.isNaN(Number(poolId))) {
 			query = query 
 			.where('pool_hash.id', '=', poolId);
@@ -745,7 +751,10 @@ export class PostgresClient implements DbClient {
 			query = query 
 			.where('pool_hash.view', '=', poolId);
 		}
-		return query.then(rows => {
+		return query
+		.orderBy('pu.registered_tx_id', 'desc')
+		.limit(1)
+		.then(rows => {
 			if (rows.length == 0) return null;
 			const { data, ...cols } = rows[0];
 			return { ...cols, ...data};
