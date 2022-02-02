@@ -23,7 +23,7 @@ export interface DbClient {
 	getTransactionTip(id: number|string): Promise<number>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
 	getTransactionInputUtxos(txHash: string): Promise<Utxo[]>;
-	getTransactionMetadata(txHash: string): Promise<Metadata[]>;
+	getTransactionMetadata(txHash: string, size: number, order: string, key: number): Promise<Metadata[]>;
 	getAddressTransactionsTotal(address: string): Promise<number>;
 	getAddressBalance(address: string): Promise<number>;
 	getAddressAssets(address: string, size: number, order: string, fingerprint: string): Promise<Asset[]>;

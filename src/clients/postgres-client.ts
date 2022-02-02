@@ -390,14 +390,17 @@ export class PostgresClient implements DbClient {
 		.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
-	async getTransactionMetadata(txHash: string): Promise<Metadata[]> {
+	async getTransactionMetadata(txHash: string, size = 50, order = 'desc', key = -1): Promise<Metadata[]> {
+		const seekExpr = key < 0 ? '' : order == 'asc' ? `> ${key}` : `< ${key}`;
 		return this.knex.select(
 			'tx_metadata.key as label',
 			'tx_metadata.json',
 		)
 		.from<Metadata>('tx_metadata')
 		.innerJoin('tx', 'tx.id', 'tx_metadata.tx_id')
-		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+		.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
+		.orderBy('tx_metadata.key', order)
+		.limit(size)
 	}
 
 	async getAddressTransactionsTotal(address: string): Promise<number> {

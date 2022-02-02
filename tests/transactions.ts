@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { PostgresClient } from '../src/clients/postgres-client';
 
-const db_host = '54.215.96.227';
-const db_port = 6543;
-const db_user = 'cardano';
+const db_host = 'localhost';
+const db_port = 5432;
+const db_user = 'leo';
 const db_pwd = 'kraken!';
 const db_name = 'testnet';
 let client: PostgresClient = null;
@@ -17,9 +17,8 @@ describe('transaction endpoints', function () {
                 host: db_host,
                 port: db_port,
                 user: db_user,
-                password: db_pwd,
+                // password: db_pwd,
                 database: db_name,
-                ssl: {rejectUnauthorized: false}
             },
             debug: true
         });
@@ -57,7 +56,18 @@ describe('transaction endpoints', function () {
 
         // assert
         expect(utxos).not.null;
-    })
+    });
+
+    it('should get tx metadata', async () => {
+        // arrange
+        const txHash = '1c8997f9f0debde5b15fe29f0f18839a64e51c19ccdbe89e2811930d777c9b68';
+
+        // act
+        const metadata = await client.getTransactionMetadata(txHash, 50, 'desc', 4);
+
+        // assert
+        expect(metadata).not.null;
+    });
 
     after('closing connection', async () => {
         await client.disconnect();
