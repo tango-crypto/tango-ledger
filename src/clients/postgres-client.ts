@@ -13,6 +13,7 @@ import Utils from "../utils";
 import { Metadata } from '../models/metadata';
 import { EpochParameters } from '../models/epoch-paramenters';
 import { PoolDelegation } from '../models/pool-delegation';
+import { Epoch } from '../models/epoch';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -896,6 +897,23 @@ export class PostgresClient implements DbClient {
 				return null;
 			}
 		})
+	}
+
+	async getLatestEpoch(): Promise<Epoch> {
+		return this.knex.select(
+			'epoch.id',
+			'epoch.out_sum',
+			'epoch.fees',
+			'epoch.tx_count',
+			'epoch.blk_count',
+			'epoch.no',
+			'epoch.start_time',
+			'epoch.end_time'
+		)
+		.from('epoch')
+		.orderBy('epoch.no', 'desc')
+		.limit(1)
+		.then((rows: any[]) => rows[0])
 	}
 
 	async getEpochParamters(epoch: number): Promise<EpochParameters> {
