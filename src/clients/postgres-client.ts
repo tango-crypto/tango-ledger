@@ -206,7 +206,10 @@ export class PostgresClient implements DbClient {
 		.limit(size);
 	}
 
-	async getTransaction(txHash: string): Promise<Transaction> {
+	async getTransaction(id: number|string, shallow = false): Promise<Transaction> {
+		if (shallow) return this.getTransactionShallow(id);
+		const numberOrHash = Number(id);
+		const whereFilter = Number.isNaN(numberOrHash) ? `tx.hash = decode('${id}', 'hex')` : `tx.id = ${id}`;
 		return this.knex.select(
 			'tx.id',
 			'tx.block_id',
@@ -250,7 +253,7 @@ export class PostgresClient implements DbClient {
 				.innerJoin('tx', 'tx.id', 'utxo.tx_id')
 				.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo.id')
 				.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
-				.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+				.whereRaw(whereFilter)
 				.groupBy('tx.id', 'asset.policy', 'asset.name', 'asset.fingerprint')
 				.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
 		)
@@ -291,6 +294,32 @@ export class PostgresClient implements DbClient {
 			} : null;
 			return tx;
 		});
+	}
+
+	private async getTransactionShallow(id: number|string): Promise<Transaction> {
+		let query = this.knex.select(
+			'tx.id',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'tx.block_id',
+			'tx.block_index',
+			'tx.out_sum',
+			'tx.fee',
+			'tx.deposit',
+			'tx.size',
+			'tx.invalid_before',
+			'tx.invalid_hereafter',
+			'tx.valid_contract',
+			'tx.script_size'
+		)
+		.from<Transaction>('tx');
+
+		const numberOrHash = Number(id); 
+		if (Number.isNaN(numberOrHash)) {
+			query = query.whereRaw(`tx.hash = decode('${id}', 'hex')`)
+		} else {
+			query  = query.where('tx.id', '=', id)
+		}
+		return query.then((rows: any[]) => rows[0]);
 	}
 
 	async getTransactionTip(id: number | string): Promise<number> {

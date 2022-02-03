@@ -30,7 +30,17 @@ describe('transaction endpoints', function () {
 
         // act
         const tx = await client.getTransaction(txHash);
-        console.log('TX', tx);
+
+        // assert
+        expect(tx).not.null;
+    });
+
+    it('should get tx shallow', async () => {
+        // arrange
+        const id = 1992094;
+
+        // act
+        const tx = await client.getTransaction(id, true);
 
         // assert
         expect(tx).not.null;
