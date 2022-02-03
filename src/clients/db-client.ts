@@ -9,6 +9,7 @@ import { EpochParameters } from "../models/epoch-paramenters";
 import { PoolDelegation } from "../models/pool-delegation";
 import { Asset } from "../models/asset";
 import { Epoch } from "../models/epoch";
+import { StakeAddress } from "../models/stake-address";
 
 export interface DbClient {
 	reconnect(): void;
@@ -32,6 +33,7 @@ export interface DbClient {
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;
+	getStakeAddress(addrId: number): Promise<StakeAddress>;
 	getStakeAddresses(stakeAddress: string, size: number, order: string, address: string): Promise<Address[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;

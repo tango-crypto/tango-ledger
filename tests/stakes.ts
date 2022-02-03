@@ -47,6 +47,18 @@ describe('stake endpoints', function () {
       
     });
 
+    it('should get stake address by id', async () => {
+        // arrange
+        const addrId = 403888;
+
+        // act
+        const stakeAddress = await client.getStakeAddress(addrId);
+
+        // assert
+        expect(stakeAddress).not.null;
+       
+    })
+
     after('closing connection', async () => {
         await client.disconnect();
     })

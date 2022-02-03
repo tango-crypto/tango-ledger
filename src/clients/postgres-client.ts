@@ -14,6 +14,7 @@ import { Metadata } from '../models/metadata';
 import { EpochParameters } from '../models/epoch-paramenters';
 import { PoolDelegation } from '../models/pool-delegation';
 import { Epoch } from '../models/epoch';
+import { StakeAddress } from '../models/stake-address';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -713,6 +714,19 @@ export class PostgresClient implements DbClient {
 		.where('sa.view', '=', stakeAddress)
 		.limit(1)
 		.then(rows => rows[0]);
+	}
+
+	async getStakeAddress(addrId: number): Promise<StakeAddress> {
+		return this.knex.select(
+			'id', 
+			this.knex.raw(`encode(hash_raw, 'hex') as hash`), 
+			'view as address', 
+			this.knex.raw(`encode(script_hash, 'hex') as script_hash`), 
+			'registered_tx_id'
+		)
+		.from('stake_address')
+		.where('stake_address.id', '=', addrId)
+		.then((rows: any[]) => rows[0]);
 	}
 
 	async getStakeAddresses(stakeAddress: string, size = 50, order = 'desc', address = ''): Promise<Address[]> {
