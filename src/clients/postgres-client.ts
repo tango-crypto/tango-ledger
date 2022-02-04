@@ -785,7 +785,7 @@ export class PostgresClient implements DbClient {
 		)
 		.from<Pool>({pu: 'pool_update'})
 		.innerJoin('pool_hash', 'pool_hash.id', 'pu.hash_id')
-		.innerJoin('epoch', 'epoch.no', 'pu.active_epoch_no')
+		.leftJoin('epoch', 'epoch.no', 'pu.active_epoch_no')
 		.leftJoin({pmr: 'pool_metadata_ref'}, 'pmr.id', 'pu.meta_id')
 		.leftJoin({pod: 'pool_offline_data'}, 'pod.pmr_id', 'pmr.id');
 		if (!Number.isNaN(Number(poolId))) {
@@ -796,7 +796,7 @@ export class PostgresClient implements DbClient {
 			.where('pool_hash.view', '=', poolId);
 		}
 		return query
-		.orderBy('pu.registered_tx_id', 'desc')
+		.orderByRaw('case when epoch.no is null then 0 else pu.registered_tx_id end desc, pu.active_epoch_no desc')
 		.limit(1)
 		.then(rows => {
 			if (rows.length == 0) return null;
