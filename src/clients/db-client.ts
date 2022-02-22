@@ -20,7 +20,7 @@ export interface DbClient {
 	getLatestBlock(): Promise<Block>;
 	getLatestBlockTip(): Promise<number>;
 	getBlockTransactionsById(block_id: number): Promise<Transaction[]>;
-	getBlockTransactions(block_no: number, size: number, order: string, txId: number): Promise<Transaction[]>;
+	getBlockTransactions(id: number|string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getTransaction(id: number|string, shallow: boolean): Promise<Transaction>;
 	getTransactionTip(id: number|string): Promise<number>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;

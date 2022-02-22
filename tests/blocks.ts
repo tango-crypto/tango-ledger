@@ -33,8 +33,9 @@ describe('block endpoints', function () {
         });
 
         it('should return block transactions by block #', async () => {
-            const blockNo = 3174184;
-            const trannsactions = await client.getBlockTransactions(blockNo, 4, 'asc', 2670018);
+            const blockNoOrHash = '18483364e53f83d96572d852fe2dbdbd174fa522b99ba9efedb42da0212e99d4'; 
+            // const blockNoOrHash = 3174184; 
+            const trannsactions = await client.getBlockTransactions(blockNoOrHash, 4, 'asc', 2670018);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
 

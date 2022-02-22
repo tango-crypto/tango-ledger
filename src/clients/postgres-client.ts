@@ -183,8 +183,10 @@ export class PostgresClient implements DbClient {
 		.where('tx.block_id', '=', block_id);
 	}
 
-	async getBlockTransactions(block_no: number, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
+	async getBlockTransactions(id: number | string, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
 		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		const numberOrHash = Number(id);
+		const whereFilter = Number.isNaN(numberOrHash) ? `block.hash = decode('${id}', 'hex')` : `block.block_no = ${numberOrHash}`
 		return this.knex.select(
 			'tx.id',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
@@ -201,7 +203,7 @@ export class PostgresClient implements DbClient {
 		)
 		.from<Transaction>('tx')
 		.innerJoin('block', 'tx.block_id', 'block.id')
-		.whereRaw(`block.block_no = ${block_no}${seekExpr ? ' and tx.id ' + seekExpr : ''}`)
+		.whereRaw(`${whereFilter}${seekExpr ? ' and tx.id ' + seekExpr : ''}`)
 		.orderBy('tx.id', order)
 		.limit(size);
 	}
@@ -535,7 +537,7 @@ export class PostgresClient implements DbClient {
 	}
 
 	async getAddressUtxos(address: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Utxo[]> {
-		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId} or (tx_out.tx_id = ${txId} and tx_out.index > ${index})` : `< ${txId} or  (tx_out.tx_id = ${txId} and tx_out.index < ${index})`;
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId} or (tx_out.tx_id = ${txId} and tx_out.index > ${index})` : `< ${txId} or (tx_out.tx_id = ${txId} and tx_out.index < ${index})`;
 		return this.knex.with('t',
 			this.knex.select(
 				this.knex.raw('DISTINCT(tx_out.tx_id) as tx_id'), 
