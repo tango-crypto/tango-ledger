@@ -44,6 +44,18 @@ describe('address endpoints', function () {
         // assert
         expect(assets).not.null;
        
+    });
+
+    it('should get address utxos', async () => {
+        // arrange
+        const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
+
+        // act
+        const utxos = await client.getAddressUtxos(address, 30, 'desc', 2507820, 1);
+
+        // assert
+        expect(utxos).not.null;
+       
     })
 
     after('closing connection', async () => {

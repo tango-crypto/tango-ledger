@@ -29,7 +29,7 @@ export interface DbClient {
 	getAddressTransactionsTotal(address: string): Promise<number>;
 	getAddressBalance(address: string): Promise<number>;
 	getAddressAssets(address: string, size: number, order: string, fingerprint: string): Promise<Asset[]>;
-	getAddressUtxos(address: string, size: number, order: string, txId: number): Promise<Utxo[]>;
+	getAddressUtxos(address: string, size: number, order: string, txId: number, index: number): Promise<Utxo[]>;
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;

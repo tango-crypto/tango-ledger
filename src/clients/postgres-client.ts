@@ -534,8 +534,8 @@ export class PostgresClient implements DbClient {
 		// `);
 	}
 
-	async getAddressUtxos(address: string, size = 50, order = 'desc', txId = 0): Promise<Utxo[]> {
-		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+	async getAddressUtxos(address: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Utxo[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId} or (tx_out.tx_id = ${txId} and tx_out.index > ${index})` : `< ${txId} or  (tx_out.tx_id = ${txId} and tx_out.index < ${index})`;
 		return this.knex.with('t',
 			this.knex.select(
 				this.knex.raw('DISTINCT(tx_out.tx_id) as tx_id'), 
@@ -548,7 +548,7 @@ export class PostgresClient implements DbClient {
 			.from('tx_out')
 			.leftJoin('tx_in', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
 			.whereRaw(`tx_in.tx_in_id is NULL and tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
-			.orderBy('tx_out.tx_id', order)
+			.orderByRaw(`tx_out.tx_id ${order}, tx_out.index ${order}`)
 			.limit(size)
 		)
 		.select(
