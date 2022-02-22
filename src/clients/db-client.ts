@@ -15,9 +15,10 @@ export interface DbClient {
 	reconnect(): void;
 	disconnect(): Promise<void>;
 	isConnected(): boolean;
-	getBlock(id: number|string): Promise<Block>;
-	getBlockTip(id: number|string): Promise<number>;
 	getLatestBlock(): Promise<Block>;
+	getBlock(id: number|string): Promise<Block>;
+	getBlockById(id: number|string): Promise<Block>;
+	getBlockTip(id: number|string): Promise<number>;
 	getLatestBlockTip(): Promise<number>;
 	getBlockTransactionsById(block_id: number): Promise<Transaction[]>;
 	getBlockTransactions(id: number|string, size: number, order: string, txId: number): Promise<Transaction[]>;

@@ -43,8 +43,102 @@ export class PostgresClient implements DbClient {
 		return this.knex.destroy();
 	}
 
-	// TODO: Check this query performance
+	async getLatestBlock(): Promise<Block> {
+		return this.knex.select(
+			'block.id',
+			this.knex.raw(`encode(block.hash, 'hex') as hash`),
+			'block.epoch_no',
+			'block.slot_no',
+			'block.epoch_slot_no',
+			'block.block_no',
+			'prev_block.block_no as previous_block',
+			'pool_hash.view as slot_leader',
+			'block.size',
+			'block.time',
+			'block.tx_count',
+			'tx.out_sum',
+			'tx.fees',
+			this.knex.raw(`encode(block.op_cert, 'hex') as op_cert`),
+			'block.vrf_key',
+		)
+		.from<Block>('block')
+		.leftJoin('slot_leader', 'slot_leader.id', 'block.slot_leader_id')
+		.leftJoin('pool_hash', 'pool_hash.id', 'slot_leader.pool_hash_id')
+		.leftJoin({prev_block: 'block'}, 'prev_block.id', 'block.previous_id')
+		.innerJoin(this.knex.select(
+				'block.block_no',
+				this.knex.raw(`SUM(tx.out_sum) as out_sum`),
+				this.knex.raw(`SUM(tx.fee) as fees`),
+			)
+			.from('block')
+			.leftJoin('tx', 'tx.block_id', 'block.id')
+			.whereRaw('block.block_no is not null')
+			.groupBy('block.block_no')
+			.orderBy('block.block_no', 'desc')
+			.limit(1)
+			.as('tx'), pg => pg.on('tx.block_no', 'block.block_no')
+		)
+		.then(rows => ({...rows[0], confirmations: 1}))
+	}
+
 	async getBlock(id: number|string): Promise<Block> {
+		let query = this.knex.select(
+			'block.id',
+			this.knex.raw(`encode(block.hash, 'hex') as hash`),
+			'block.epoch_no',
+			'block.slot_no',
+			'block.epoch_slot_no',
+			'block.block_no',
+			'prev_block.block_no as previous_block',
+			'next_block.block_no as next_block',
+			'pool_hash.view as slot_leader',
+			'block.size',
+			'block.time',
+			'block.tx_count',
+			'tx.out_sum',
+			'tx.fees',
+			this.knex.raw(`(select block_no from block where block_no is not null order by block_no desc limit 1 ) - block.block_no + 1 as confirmations`),
+			this.knex.raw(`encode(block.op_cert, 'hex') as op_cert`),
+			'block.vrf_key',
+		)
+		.from<Block>('block')
+		.leftJoin('slot_leader', 'slot_leader.id', 'block.slot_leader_id')
+		.leftJoin('pool_hash', 'pool_hash.id', 'slot_leader.pool_hash_id')
+		.leftJoin({prev_block: 'block'}, 'prev_block.id', 'block.previous_id')
+		.leftJoin({next_block: 'block'}, 'next_block.previous_id', 'block.id');
+		// .innerJoin('tx', 'tx.block_id', 'block.id');
+		const numberOrHash = Number(id); 
+		if (Number.isNaN(numberOrHash)) {
+			query = query
+			.innerJoin(this.knex.select(
+					'block.id as block_id',
+					this.knex.raw(`SUM(tx.out_sum) as out_sum`),
+					this.knex.raw(`SUM(tx.fee) as fees`),
+				)
+				.from('block')
+				.leftJoin('tx', 'tx.block_id', 'block.id')
+				.whereRaw(`block.hash = decode('${id}', 'hex')`)
+				.groupBy('block.id')
+				.as('tx'), pg => pg.on('tx.block_id', 'block.id')
+			)
+		} else {
+			query = query
+			.innerJoin(this.knex.select(
+					'block.id as block_id',
+					this.knex.raw(`SUM(tx.out_sum) as out_sum`),
+					this.knex.raw(`SUM(tx.fee) as fees`),
+				)
+				.from('block')
+				.leftJoin('tx', 'tx.block_id', 'block.id')
+				.where('block.block_no', '=', id)
+				.groupBy('block.id')
+				.as('tx'), pg => pg.on('tx.block_id', 'block.id')
+			)
+		}
+		return query.then(rows => rows[0]);
+	}
+
+	async getBlockById(id: number|string): Promise<Block> {
 		let query = this.knex.select(
 			'block.id',
 			this.knex.raw(`encode(block.hash, 'hex') as hash`),
@@ -115,44 +209,6 @@ export class PostgresClient implements DbClient {
 		return query.then(rows => rows[0]?.block_no);
 	}
 
-	async getLatestBlock(): Promise<Block> {
-		return this.knex.select(
-			'block.id',
-			this.knex.raw(`encode(block.hash, 'hex') as hash`),
-			'block.epoch_no',
-			'block.slot_no',
-			'block.epoch_slot_no',
-			'block.block_no',
-			'prev_block.block_no as previous_block',
-			'pool_hash.view as slot_leader',
-			'block.size',
-			'block.time',
-			'block.tx_count',
-			'tx.out_sum',
-			'tx.fees',
-			this.knex.raw(`encode(block.op_cert, 'hex') as op_cert`),
-			'block.vrf_key',
-		)
-		.from<Block>('block')
-		.leftJoin('slot_leader', 'slot_leader.id', 'block.slot_leader_id')
-		.leftJoin('pool_hash', 'pool_hash.id', 'slot_leader.pool_hash_id')
-		.leftJoin({prev_block: 'block'}, 'prev_block.id', 'block.previous_id')
-		.innerJoin(this.knex.select(
-				'block.block_no',
-				this.knex.raw(`SUM(tx.out_sum) as out_sum`),
-				this.knex.raw(`SUM(tx.fee) as fees`),
-			)
-			.from('block')
-			.leftJoin('tx', 'tx.block_id', 'block.id')
-			.whereRaw('block.block_no is not null')
-			.groupBy('block.block_no')
-			.orderBy('block.block_no', 'desc')
-			.limit(1)
-			.as('tx'), pg => pg.on('tx.block_no', 'block.block_no')
-		)
-		.then(rows => ({...rows[0], confirmations: 1}))
-	}
-
 	async getLatestBlockTip(): Promise<number> {
 		return this.knex.select(
 			'block.block_no as block_no',
@@ -162,25 +218,6 @@ export class PostgresClient implements DbClient {
 		.orderBy('block.block_no', 'desc')
 		.limit(1)
 		.then(rows => rows[0].block_no)
-	}
-
-	async getBlockTransactionsById(block_id: number): Promise<Transaction[]> {
-		return this.knex.select(
-			'tx.id',
-			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
-			'tx.block_id',
-			'tx.block_index',
-			'tx.out_sum',
-			'tx.fee',
-			'tx.deposit',
-			'tx.size',
-			'tx.invalid_before',
-			'tx.invalid_hereafter',
-			'tx.valid_contract',
-			'tx.script_size'
-		)
-		.from<Transaction>('tx')
-		.where('tx.block_id', '=', block_id);
 	}
 
 	async getBlockTransactions(id: number | string, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
@@ -206,6 +243,25 @@ export class PostgresClient implements DbClient {
 		.whereRaw(`${whereFilter}${seekExpr ? ' and tx.id ' + seekExpr : ''}`)
 		.orderBy('tx.id', order)
 		.limit(size);
+	}
+
+	async getBlockTransactionsById(block_id: number): Promise<Transaction[]> {
+		return this.knex.select(
+			'tx.id',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'tx.block_id',
+			'tx.block_index',
+			'tx.out_sum',
+			'tx.fee',
+			'tx.deposit',
+			'tx.size',
+			'tx.invalid_before',
+			'tx.invalid_hereafter',
+			'tx.valid_contract',
+			'tx.script_size'
+		)
+		.from<Transaction>('tx')
+		.where('tx.block_id', '=', block_id);
 	}
 
 	async getTransaction(id: number|string, shallow = false): Promise<Transaction> {
