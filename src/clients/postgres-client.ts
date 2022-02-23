@@ -928,7 +928,7 @@ export class PostgresClient implements DbClient {
 				this.knex.raw('COALESCE(SUM (r.amount), 0) as rewards'),
 			)
 			.from({d: 'delegations'})
-			.leftJoin({r: 'reward'}, pg => pg.on('r.addr_id', 'd.addr_id').andOn(this.knex.raw('r.pool_id is not null')))
+			.leftJoin({r: 'reward'}, pg => pg.on('r.addr_id', 'd.addr_id'))
 			.groupByRaw('d.tx_id')
 			.as('r')
 		)
