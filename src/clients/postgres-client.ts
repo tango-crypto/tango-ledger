@@ -938,13 +938,10 @@ export class PostgresClient implements DbClient {
 			)
 			.from({d: 'delegations'})
 			.leftJoin(this.knex.select(
-					'w.addr_id',
+					this.knex.raw('distinct on (w.tx_id) w.addr_id'),
 					'w.amount',
-					'block.epoch_no'
 				)
 				.from({w: 'withdrawal'})
-				.innerJoin('tx', 'tx.id', 'w.tx_id')
-				.innerJoin('block', 'block.id', 'tx.block_id')
 				.as('w'), pg => pg.on('w.addr_id', 'd.addr_id')
 			)
 			.groupByRaw('d.tx_id')
