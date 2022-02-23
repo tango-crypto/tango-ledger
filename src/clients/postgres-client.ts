@@ -765,22 +765,34 @@ export class PostgresClient implements DbClient {
 			.as('reward'), pg => pg.on('reward.addr_id', 'sa.id')
 		)
 		.leftJoin(this.knex.select(
-				'withdrawal.addr_id', 
-				this.knex.raw(`SUM(withdrawal.amount) as withdrawals_sum`)
+				'w.addr_id', 
+				this.knex.raw(`SUM(w.amount) as withdrawals_sum`)
 			)
-			.from('withdrawal')
-			.innerJoin({sa: 'stake_address'}, 'sa.id', 'withdrawal.addr_id')
-			.where('sa.view', '=', stakeAddress)
-			.groupBy('withdrawal.addr_id')
+			.from(this.knex.select(
+					this.knex.raw('distinct on (withdrawal.tx_id) withdrawal.addr_id'),
+					'withdrawal.amount'
+				)
+				.from('withdrawal')
+				.innerJoin({sa: 'stake_address'}, 'sa.id', 'withdrawal.addr_id')
+				.where('sa.view', '=', stakeAddress)
+				.as('w')
+			)
+			.groupBy('w.addr_id')
 			.as('wd'), pg => pg.on('wd.addr_id', 'sa.id')
 		)
 		.leftJoin(this.knex.select(
 				'reserve.addr_id', 
 				this.knex.raw(`SUM(reserve.amount) as reserves_sum`)
 			)
-			.from('reserve')
-			.innerJoin({sa: 'stake_address'}, 'sa.id', 'reserve.addr_id')
-			.where('sa.view', '=', stakeAddress)
+			.from(this.knex.select(
+					this.knex.raw('distinct on (reserve.tx_id) reserve.addr_id'),
+					'reserve.amount'
+				)
+				.from('reserve')
+				.innerJoin({sa: 'stake_address'}, 'sa.id', 'reserve.addr_id')
+				.where('sa.view', '=', stakeAddress)
+				.as('reserve')
+			)
 			.groupBy('reserve.addr_id')
 			.as('reserve'), pg => pg.on('reserve.addr_id', 'sa.id')
 		)
@@ -788,9 +800,15 @@ export class PostgresClient implements DbClient {
 				'treasury.addr_id', 
 				this.knex.raw(`SUM(treasury.amount) as treasury_sum`)
 			)
-			.from('treasury')
-			.innerJoin({sa: 'stake_address'}, 'sa.id', 'treasury.addr_id')
-			.where('sa.view', '=', stakeAddress)
+			.from(this.knex.select(
+					this.knex.raw('distinct on (treasury.tx_id) treasury.addr_id'),
+					'treasury.amount'
+				)
+				.from('treasury')
+				.innerJoin({sa: 'stake_address'}, 'sa.id', 'treasury.addr_id')
+				.where('sa.view', '=', stakeAddress)
+				.as('treasury')
+			)
 			.groupBy('treasury.addr_id')
 			.as('treasury'), pg => pg.on('treasury.addr_id', 'sa.id')
 		)

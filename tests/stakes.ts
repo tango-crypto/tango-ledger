@@ -35,6 +35,18 @@ describe('stake endpoints', function () {
       
     });
 
+    it('should get stake', async () => {
+        // arrange
+        const stakeAddress = 'stake_test1uppsenjxtw83kdle0gq78dvn4gwtrtl6jcda2wramw29lgg6upgtu';
+
+        // act
+        const stake = await client.getStake(stakeAddress);
+
+        // assert
+        expect(stake).not.undefined;
+      
+    });
+
     it('should get stake addresses', async () => {
         // arrange
         const stakeAddress = 'stake_test1urtt0tpxwxyll6gclxnz5srjx3zjr099pgrqkd3st7339tcr0u0ph';
