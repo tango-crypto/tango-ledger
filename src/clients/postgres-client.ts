@@ -741,7 +741,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw('COALESCE(reserve.reserves_sum, 0) as reserves_sum'),
 			this.knex.raw('COALESCE(treasury.treasury_sum, 0) as treasury_sum'),
 			this.knex.raw('COALESCE(reward.rewards_sum, 0) - COALESCE(wd.withdrawals_sum, 0) as withdraw_available'),
-			this.knex.raw(`(select "pool_hash"."view" from stake_address as sa inner join delegation del on del.addr_id = sa.id inner join pool_hash on pool_hash.id = del.pool_hash_id where "sa"."view" = '${stakeAddress}' order by del.active_epoch_no desc limit 1) as pool_id`),
+			this.knex.raw(`(select "pool_hash"."view" from stake_address as sa inner join delegation del on del.addr_id = sa.id inner join pool_hash on pool_hash.id = del.pool_hash_id where "sa"."view" = '${stakeAddress}' order by del.tx_id desc limit 1) as pool_id`),
 		)
 		.from<Stake>({sa: 'stake_address'})
 		.leftJoin(this.knex.select(
