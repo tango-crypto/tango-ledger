@@ -1015,6 +1015,23 @@ export class PostgresClient implements DbClient {
 		})
 	}
 
+	async getAssetAddresses(identifier: string, size: number, order: string, address = ''): Promise<Address[]> {
+		const seekExpr = address ? order == 'asc' ? `> '${address}'` : `< '${address}'`: '';
+		return this.knex.select(
+			'tx_out.address',
+			this.knex.raw(`SUM(mto.quantity) as quantity`),
+		)
+		.from({mto: 'ma_tx_out'})
+		.innerJoin({ma: 'multi_asset'}, 'ma.id', 'mto.ident')
+		.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
+		.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+		.whereRaw(`ma.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma.name = decode('${identifier.substring(56)}', 'hex')`)
+		.andWhereRaw(`tx_in.tx_in_id is null${seekExpr ? ' and tx_out.address ' + seekExpr : ''}`)
+		.groupBy('tx_out.address')
+		.orderBy('tx_out.address', order)
+		.limit(size);
+	}
+
 	async getLatestEpoch(): Promise<Epoch> {
 		return this.knex.select(
 			'epoch.id',

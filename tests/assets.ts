@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import { PostgresClient } from '../src/clients/postgres-client';
 
-const db_host = '54.215.96.227';
-const db_port = 6543;
-const db_user = 'cardano';
-const db_pwd = 'kraken!';
+const db_host = 'localhost';
+const db_port = 5432;
+const db_user = 'leo';
+// const db_pwd = 'kraken!';
 const db_name = 'testnet';
 let client: PostgresClient = null;
 
@@ -17,9 +17,8 @@ describe('assets endpoints', function () {
                 host: db_host,
                 port: db_port,
                 user: db_user,
-                password: db_pwd,
+                // password: db_pwd,
                 database: db_name,
-                ssl: {rejectUnauthorized: false}
             },
             debug: true
         });
@@ -34,6 +33,20 @@ describe('assets endpoints', function () {
 
         // assert
         expect(asset).not.null;
+      
+    });
+
+    it('should get asset addresses', async () => {
+        // arrange
+        const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
+        const address = 'addr_test1qphzuz2250w0zljmt24x37c36nu8nyhv2s8nced4u7psfegtg2ckq83t2adz9gv0y0d0hyz0yj6dmendf7enpze0y33qm8wldn';
+
+        // act
+        const addresses = await client.getAssetAddresses(identifier, 10, 'asc', address);
+        console.log(addresses);
+
+        // assert
+        expect(addresses).not.null;
       
     });
 
