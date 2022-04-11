@@ -39,6 +39,7 @@ export interface DbClient {
 	getAsset(identifier: string): Promise<Asset>;
 	getAssetByFingerprint(fingerprint: string): Promise<Asset>;
 	getAssetAddresses(identifier: string, size: number, order: string, address: string): Promise<Address[]>;
+	getPolicyAssets(policyId: string): Promise<Asset[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;
 	getDelegations(poolId: string, size: number, order: string, txId: number): Promise<PoolDelegation[]>;
