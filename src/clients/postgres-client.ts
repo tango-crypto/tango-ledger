@@ -1068,7 +1068,7 @@ export class PostgresClient implements DbClient {
 			.innerJoin('ma_tx_mint', 'asset.id', 'ma_tx_mint.ident')
 			.whereRaw(`asset.policy = decode('${policyId}', 'hex')${seekExpr ? ' and asset.fingerprint ' + seekExpr : ''}`)
 			.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
-			.orderBy('asset.fingerprint')
+			.orderBy('asset.fingerprint', order)
 			.limit(size)
 		)
 		.select(
