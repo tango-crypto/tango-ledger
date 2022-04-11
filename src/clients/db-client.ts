@@ -37,6 +37,7 @@ export interface DbClient {
 	getStakeAddress(addrId: number): Promise<StakeAddress>;
 	getStakeAddresses(stakeAddress: string, size: number, order: string, address: string): Promise<Address[]>;
 	getAsset(identifier: string): Promise<Asset>;
+	getAssetByFingerprint(fingerprint: string): Promise<Asset>;
 	getAssetAddresses(identifier: string, size: number, order: string, address: string): Promise<Address[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;

@@ -996,23 +996,45 @@ export class PostgresClient implements DbClient {
 		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
 		.then((rows: any[]) => {
 			if (rows.length > 0) {
-				const {on_chain_metadata, ...asset}: Asset = rows[0];
-				// let assetFingerprint  = new AssetFingerprint(
-				// 	Buffer.from(asset.policy_id, 'hex'),
-				// 	Buffer.from(asset.asset_name, 'hex')
-				// );
-				// asset.fingerprint = assetFingerprint.fingerprint();
-				if (on_chain_metadata) {
-					const { key, ...json } = on_chain_metadata;
-					asset.metadata = {label: key, json};
-				} else {
-					asset.metadata = null;
-				}
-				return asset;
+				return this.buildFingerPrint(rows);
 			} else {
 				return null;
 			}
 		})
+	}
+
+	async getAssetByFingerprint(fingerprint: string): Promise<Asset> {
+		return this.knex.select(
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			'asset.fingerprint',
+			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
+			this.knex.raw(`count(*) as mint_or_burn_count`),
+			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' order by tx.id asc limit 1) as initial_mint_tx_hash`),
+			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' limit 1) as on_chain_metadata`)
+		)
+		.from<Asset>('ma_tx_mint')
+		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'ma_tx_mint.ident')
+		.whereRaw(`asset.fingerprint = '${fingerprint}'`)
+		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
+		.then((rows: any[]) => {
+			if (rows.length > 0) {
+				return this.buildFingerPrint(rows);
+			} else {
+				return null;
+			}
+		})
+	}
+
+	private buildFingerPrint(rows: any[]) {
+		const { on_chain_metadata, ...asset }: Asset = rows[0];
+		if (on_chain_metadata) {
+			const { key, ...json } = on_chain_metadata;
+			asset.metadata = { label: key, json };
+		} else {
+			asset.metadata = null;
+		}
+		return asset;
 	}
 
 	async getAssetAddresses(identifier: string, size: number, order: string, address = ''): Promise<Address[]> {
