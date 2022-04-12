@@ -3,6 +3,7 @@ export * from "./src/clients/db-client";
 export * from "./src/clients/postgres-client";
 export * from "./src/models/address";
 export * from "./src/models/asset";
+export * from "./src/models/asset-owner";
 export * from "./src/models/block";
 export * from "./src/models/pool";
 export * from "./src/models/pool-delegation";
