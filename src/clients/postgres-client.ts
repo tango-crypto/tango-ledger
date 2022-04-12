@@ -15,6 +15,7 @@ import { EpochParameters } from '../models/epoch-paramenters';
 import { PoolDelegation } from '../models/pool-delegation';
 import { Epoch } from '../models/epoch';
 import { StakeAddress } from '../models/stake-address';
+import { AssetOwner } from '../models/asset-owner';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -1037,20 +1038,65 @@ export class PostgresClient implements DbClient {
 		return asset;
 	}
 
-	async getAssetAddresses(identifier: string, size: number, order: string, address = ''): Promise<Address[]> {
-		const seekExpr = address ? order == 'asc' ? `> '${address}'` : `< '${address}'`: '';
-		return this.knex.select(
-			'tx_out.address',
-			this.knex.raw(`SUM(mto.quantity) as quantity`),
+	async getAssetOwners(identifier: string, size: number, order: string, address = '', quantity = ''): Promise<AssetOwner[]> {
+		const seekExpr = !quantity ? '' : order == 'asc' 
+		? `(owners.address > '${address}' and owners.quantity = ${quantity}) or owners.quantity > ${quantity}` 
+		: `(owners.address < '${address}' and owners.quantity = ${quantity}) or owners.quantity < ${quantity}`;
+		let query = this.knex.with('owners', 
+			this.knex.select(
+				'tx_out.address',
+				this.knex.raw(`SUM(MTO.QUANTITY) OVER(partition by tx_out.address) AS QUANTITY`),
+				this.knex.raw(`SUM(MTO.QUANTITY) OVER() AS TOTAL`)
+			)
+			.from({mto: 'ma_tx_out'})
+			.innerJoin({ma: 'multi_asset'}, 'ma.id', 'mto.ident')
+			.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
+			.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+			.whereRaw(`ma.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma.name = decode('${identifier.substring(56)}', 'hex') AND tx_in.tx_in_id is null`)
 		)
-		.from({mto: 'ma_tx_out'})
-		.innerJoin({ma: 'multi_asset'}, 'ma.id', 'mto.ident')
-		.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
-		.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
-		.whereRaw(`ma.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma.name = decode('${identifier.substring(56)}', 'hex')`)
-		.andWhereRaw(`tx_in.tx_in_id is null${seekExpr ? ' and tx_out.address ' + seekExpr : ''}`)
-		.groupBy('tx_out.address')
-		.orderBy('tx_out.address', order)
+		.select(
+			'owners.address',
+			'owners.quantity',
+			this.knex.raw('owners.quantity/MAX(owners.total) * 100 as share')
+		)
+		.from('owners');
+		if (seekExpr) {
+			query = query.whereRaw(seekExpr)
+		}
+
+		return query.groupByRaw('owners.address, owners.quantity')
+		.orderByRaw(`owners.quantity ${order}, owners.address ${order}`)
+		.limit(size);
+	}
+
+	async getAssetOwnersByFingerprint(fingerprint: string, size: number, order: string, address = '', quantity = ''): Promise<AssetOwner[]> {
+		const seekExpr = !quantity ? '' : order == 'asc' 
+		? `(owners.address > '${address}' and owners.quantity = ${quantity}) or owners.quantity > ${quantity}` 
+		: `(owners.address < '${address}' and owners.quantity = ${quantity}) or owners.quantity < ${quantity}`;
+		let query = this.knex.with('owners', 
+			this.knex.select(
+				'tx_out.address',
+				this.knex.raw(`SUM(MTO.QUANTITY) OVER(partition by tx_out.address) AS QUANTITY`),
+				this.knex.raw(`SUM(MTO.QUANTITY) OVER() AS TOTAL`)
+			)
+			.from({mto: 'ma_tx_out'})
+			.innerJoin({ma: 'multi_asset'}, 'ma.id', 'mto.ident')
+			.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
+			.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+			.whereRaw(`ma.fingerprint = '${fingerprint}' and tx_in.tx_in_id is null`)
+		)
+		.select(
+			'owners.address',
+			'owners.quantity',
+			this.knex.raw('owners.quantity/MAX(owners.total) * 100 as share')
+		)
+		.from('owners');
+		if (seekExpr) {
+			query = query.whereRaw(seekExpr)
+		}
+
+		return query.groupByRaw('owners.address, owners.quantity')
+		.orderByRaw(`owners.quantity ${order}, owners.address ${order}`)
 		.limit(size);
 	}
 

@@ -48,17 +48,31 @@ describe('assets endpoints', function () {
       
     });
 
-    it('should get asset addresses', async () => {
+    it('should get asset owners', async () => {
         // arrange
         const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
         const address = 'addr_test1qphzuz2250w0zljmt24x37c36nu8nyhv2s8nced4u7psfegtg2ckq83t2adz9gv0y0d0hyz0yj6dmendf7enpze0y33qm8wldn';
 
         // act
-        const addresses = await client.getAssetAddresses(identifier, 10, 'asc', address);
-        console.log(addresses);
+        const owners = await client.getAssetOwners(identifier, 10, 'asc', address);
 
         // assert
-        expect(addresses).not.null;
+        expect(owners).not.null;
+      
+    });
+
+    it('should get asset owners by fingerprint', async () => {
+        // arrange
+        const fingerprint = 'asset1ee0u29k4xwauf0r7w8g30klgraxw0y4rz2t7xs';
+        const address = 'addr_test1qpwd4nthqsfvjcdmj7x9y0cus4eds8s3na9ke2tmkdmjezw2nzfdp07su08s0x8egzyfdkjk0t7d45e59t4ky8x5drrsawh0d8';
+        const quantity = '2';
+
+        // act
+        const owners = await client.getAssetOwnersByFingerprint(fingerprint, 4, 'asc', address, quantity);
+        console.log(owners);
+
+        // assert
+        expect(owners).not.null;
       
     });
 

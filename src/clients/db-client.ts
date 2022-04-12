@@ -10,6 +10,7 @@ import { PoolDelegation } from "../models/pool-delegation";
 import { Asset } from "../models/asset";
 import { Epoch } from "../models/epoch";
 import { StakeAddress } from "../models/stake-address";
+import { AssetOwner } from "../models/asset-owner";
 
 export interface DbClient {
 	reconnect(): void;
@@ -38,7 +39,8 @@ export interface DbClient {
 	getStakeAddresses(stakeAddress: string, size: number, order: string, address: string): Promise<Address[]>;
 	getAsset(identifier: string): Promise<Asset>;
 	getAssetByFingerprint(fingerprint: string): Promise<Asset>;
-	getAssetAddresses(identifier: string, size: number, order: string, address: string): Promise<Address[]>;
+	getAssetOwners(identifier: string, size: number, order: string, address: string, quantity: string): Promise<AssetOwner[]>;
+	getAssetOwnersByFingerprint(fingerprint: string, size: number, order: string, address: string, quantity: string): Promise<AssetOwner[]>
 	getPolicyAssets(policyId: string): Promise<Asset[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;
