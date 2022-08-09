@@ -6,7 +6,7 @@ const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
 const db_name = 'testnet';
-let client: PostgresClient = null;
+let client: PostgresClient;
 
 describe('transaction endpoints', function () {
     this.timeout(5000); 
@@ -26,7 +26,8 @@ describe('transaction endpoints', function () {
 
     it('should get tx', async () => {
         // arrange
-        const txHash = 'ee68694c061d8cf7a99e95e8286dcad51cb487c4de313f65ef5a45013f8f00dd';
+        // const txHash = 'ee68694c061d8cf7a99e95e8286dcad51cb487c4de313f65ef5a45013f8f00dd';
+        const txHash = '4e440eb7f5ff2492a3ff564482ec1c74d738a442e19565faa11e912d74701753';
 
         // act
         const tx = await client.getTransaction(txHash);

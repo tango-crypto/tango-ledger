@@ -288,11 +288,11 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`(select count(*) from stake_registration where stake_registration.tx_id = tx.id) as stake_cert_count`),
 			this.knex.raw(`exists (select 1 from pool_update where pool_update.registered_tx_id = tx.id) as pool_update`),
 			this.knex.raw(`exists (select 1 from pool_retire where pool_retire.announced_tx_id = tx.id) as pool_retire`),
-			this.knex.raw(`(select count(*) from ma_tx_mint where ma_tx_mint.tx_id = tx.id) as asset_mint_or_burn_count`),
 			this.knex.raw(`encode(block.hash, 'hex') as block_hash`),
 			'block.epoch_no as block_epoch_no',
 			'block.block_no as block_block_no',
 			'block.slot_no as block_slot_no',
+			'asset.mint_or_burn_quantity',
 			'asset.quantity',
 			'asset.policy_id',
 			'asset.asset_name',
@@ -306,23 +306,26 @@ export class PostgresClient implements DbClient {
 					this.knex.raw(`SUM(mto.quantity) as quantity`),
 					this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 					this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-					'asset.fingerprint'
+					'asset.fingerprint',
+					this.knex.raw(`COALESCE(SUM(mtm.quantity), 0) as mint_or_burn_quantity`)
 				)
 				.from({utxo: 'tx_out'})
 				.innerJoin('tx', 'tx.id', 'utxo.tx_id')
 				.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo.id')
 				.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
+				.leftJoin({mtm: 'ma_tx_mint'}, pg => pg.on('mtm.tx_id', 'tx.id').andOn('mtm.ident', 'asset.id'))
 				.whereRaw(whereFilter)
 				.groupBy('tx.id', 'asset.policy', 'asset.name', 'asset.fingerprint')
 				.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
 		)
 		.then(rows => {
-			const assets: Asset[] = rows.map(r => ({
+			const assets: Asset[] = rows.filter(a => a.policy_id).map(r => ({
+				mint_or_burn_quantity: r.mint_or_burn_quantity,
 				quantity: r.quantity, 
 				policy_id: r.policy_id, 
 				asset_name: Utils.convert(r.asset_name),
 				fingerprint: r.fingerprint
-			})).filter(a => a.policy_id);
+			}));
 			const tx: Transaction = rows.length > 0 ? {
 				id: rows[0].id,
 				hash: rows[0].hash,
@@ -342,7 +345,6 @@ export class PostgresClient implements DbClient {
 				stake_cert_count: rows[0].stake_cert_count,
 				pool_update: rows[0].pool_update,
 				pool_retire: rows[0].pool_retire,
-				asset_mint_or_burn_count: rows[0].asset_mint_or_burn_count,
 				block: { 
 					hash: rows[0].block_hash,
 					epoch_no: rows[0].block_epoch_no, 
@@ -987,7 +989,8 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
 			'asset.fingerprint',
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-			this.knex.raw(`count(*) as mint_or_burn_count`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') order by tx.id asc limit 1) as initial_mint_tx_hash`),
 			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') limit 1) as on_chain_metadata`)
 		)
@@ -1010,7 +1013,8 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
 			'asset.fingerprint',
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-			this.knex.raw(`count(*) as mint_or_burn_count`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' order by tx.id asc limit 1) as initial_mint_tx_hash`),
 			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' limit 1) as on_chain_metadata`)
 		)
