@@ -31,6 +31,6 @@ export interface Transaction {
 	asset_policy_id?: string, 
 	asset_name?: string,
 	assets?: Asset[];
-	inputs?: Utxo[];
-	outputs?: Utxo[];
+	inputs?: Utxo[] | string[];
+	outputs?: Utxo[] | string[];
 }
