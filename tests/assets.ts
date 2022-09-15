@@ -38,8 +38,8 @@ describe('assets endpoints', function () {
 
     it('should get asset by fingerprint', async () => {
         // arrange
-        // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
-        const fingerprint = 'asset1dz7d9v3xs8sf9sljw82ux0sh6x4qfq37nu7kdw';
+        const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
+        // const fingerprint = 'asset1dz7d9v3xs8sf9sljw82ux0sh6x4qfq37nu7kdw';
 
         // act
         const asset = await client.getAssetByFingerprint(fingerprint);

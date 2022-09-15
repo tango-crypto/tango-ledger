@@ -991,20 +991,18 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') order by tx.id asc limit 1) as initial_mint_tx_hash`),
-			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex') limit 1) as on_chain_metadata`)
+			this.knex.raw(`COUNT(*) as transactions`),
+			this.knex.raw(`MIN(block.time) as created_at`),
+			this.knex.raw(`ARRAY_AGG (JSONB_BUILD_OBJECT('json', TX_METADATA.JSON) || JSONB_BUILD_OBJECT('key', TX_METADATA.KEY)) as metadata`)
 		)
 		.from<Asset>('ma_tx_mint')
+		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
+		.innerJoin('block', 'block.id', 'tx.block_id')
 		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'ma_tx_mint.ident')
+		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
 		.whereRaw(`asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`)
 		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
-		.then((rows: any[]) => {
-			if (rows.length > 0) {
-				return this.builAsset(rows[0]);
-			} else {
-				return null;
-			}
-		})
+		.then((rows: any[]) => rows[0] || null)
 	}
 
 	async getAssetByFingerprint(fingerprint: string): Promise<Asset> {
@@ -1015,32 +1013,30 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			this.knex.raw(`(select encode(tx.hash, 'hex') from tx inner join ma_tx_mint on tx.id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' order by tx.id asc limit 1) as initial_mint_tx_hash`),
-			this.knex.raw(`(select tx_metadata.json || jsonb_build_object('key', tx_metadata.key) from tx_metadata inner join ma_tx_mint on tx_metadata.tx_id = ma_tx_mint.tx_id inner join multi_asset as asset on asset.id = ma_tx_mint.ident where asset.fingerprint = '${fingerprint}' limit 1) as on_chain_metadata`)
+			this.knex.raw(`COUNT(*) as transactions`),
+			this.knex.raw(`MIN(block.time) as created_at`),
+			this.knex.raw(`ARRAY_AGG (JSONB_BUILD_OBJECT('json', TX_METADATA.JSON) || JSONB_BUILD_OBJECT('key', TX_METADATA.KEY)) as metadata`)
 		)
 		.from<Asset>('ma_tx_mint')
+		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
+		.innerJoin('block', 'block.id', 'tx.block_id')
 		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'ma_tx_mint.ident')
+		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
 		.whereRaw(`asset.fingerprint = '${fingerprint}'`)
 		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
-		.then((rows: any[]) => {
-			if (rows.length > 0) {
-				return this.builAsset(rows[0]);
-			} else {
-				return null;
-			}
-		})
+		.then((rows: any[]) => rows[0] || null)
 	}
 
-	private builAsset(row: any) {
-		const { on_chain_metadata, ...asset }: Asset = row;
-		if (on_chain_metadata) {
-			const { key, ...json } = on_chain_metadata;
-			asset.metadata = { label: key, json };
-		} else {
-			asset.metadata = null;
-		}
-		return asset;
-	}
+	// private builAsset(row: any) {
+	// 	const { on_chain_metadata, ...asset }: Asset = row;
+	// 	if (on_chain_metadata) {
+	// 		const { key, ...json } = on_chain_metadata;
+	// 		asset.metadata = { label: key, json };
+	// 	} else {
+	// 		asset.metadata = null;
+	// 	}
+	// 	return asset;
+	// }
 
 	async getAssetOwners(identifier: string, size: number, order: string, address = '', quantity = ''): Promise<AssetOwner[]> {
 		const seekExpr = !quantity ? '' : order == 'asc' 
@@ -1127,14 +1123,13 @@ export class PostgresClient implements DbClient {
 			`asset.fingerprint`,
 			`asset.quantity`,
 			this.knex.raw(`first_value(encode(tx.HASH, 'hex')) over(partition by asset.fingerprint order by tx.id asc) as initial_mint_tx_hash`),
-			this.knex.raw(`first_value(tx_metadata.JSON || JSONB_BUILD_OBJECT('key', tx_metadata.KEY)) over (partition by asset.fingerprint order by tx.id desc) as on_chain_metadata`),
 		)
 		.from('asset')
 		.innerJoin('ma_tx_mint', 'asset.id', 'ma_tx_mint.ident')
 		.innerJoin('tx', 'ma_tx_mint.tx_id', 'tx.id')
 		.leftJoin('tx_metadata', 'ma_tx_mint.tx_id', 'tx_metadata.id')
 		.orderBy('asset.fingerprint', order)
-		.then((rows: any[]) => rows.map(r => this.builAsset(r)));
+		.then((rows: any[]) => rows);
 	}
 
 	async getLatestEpoch(): Promise<Epoch> {
