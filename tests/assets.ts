@@ -27,6 +27,7 @@ describe('assets endpoints', function () {
     it('should get asset', async () => {
         // arrange
         const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
+        // const identifier = '45fb072eb2d45b8be940c13d1f235fa5a8263fc8ebe8c1af5194ea9c5365636f6e6454657374746f6b656e';
 
         // act
         const asset = await client.getAsset(identifier);
@@ -38,8 +39,8 @@ describe('assets endpoints', function () {
 
     it('should get asset by fingerprint', async () => {
         // arrange
-        const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
-        // const fingerprint = 'asset1dz7d9v3xs8sf9sljw82ux0sh6x4qfq37nu7kdw';
+        // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
+        const fingerprint = 'asset1dz7d9v3xs8sf9sljw82ux0sh6x4qfq37nu7kdw';
 
         // act
         const asset = await client.getAssetByFingerprint(fingerprint);

@@ -993,7 +993,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 			this.knex.raw(`COUNT(*) as transactions`),
 			this.knex.raw(`MIN(block.time) as created_at`),
-			this.knex.raw(`ARRAY_AGG (JSONB_BUILD_OBJECT('json', TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label', TX_METADATA.KEY)) as metadata`)
+			this.knex.raw(`array_remove(array_agg(CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END), NULL) as metadata`)
 		)
 		.from<Asset>('ma_tx_mint')
 		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
@@ -1015,7 +1015,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 			this.knex.raw(`COUNT(*) as transactions`),
 			this.knex.raw(`MIN(block.time) as created_at`),
-			this.knex.raw(`ARRAY_AGG (JSONB_BUILD_OBJECT('json', TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label', TX_METADATA.KEY)) as metadata`)
+			this.knex.raw(`array_remove(array_agg(CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END), NULL) as metadata`)
 		)
 		.from<Asset>('ma_tx_mint')
 		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
