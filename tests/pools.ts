@@ -24,7 +24,7 @@ describe('pool endpoints', function () {
         });
     });
     
-    it('should return pool delegations', async () => {
+    it('should return pool delegations by view (bech32 pool hash)', async () => {
         try {
             const poolId = 'pool1rnsw42f2q0u9fc32ttxy9l085n736jxz07lvwutz63wpyef03zh';
             const delegations = await client.getDelegations(poolId);
@@ -33,9 +33,26 @@ describe('pool endpoints', function () {
             console.log(err);
         }
     });
+
+    it('should return pool delegations by hash', async () => {
+        try {
+            const poolId = '1ce0eaa92a03f854e22a5acc42fde7a4fd1d48c27fbec77162d45c12';
+            const delegations = await client.getDelegations(poolId);
+            expect(delegations.length).to.be.greaterThanOrEqual(0);
+        } catch (err) {
+            console.log(err);
+        }
+    });
    
-    it('should return pool by pool_hash', async () => {
+    it('should return pool by view (bech32 pool hash)', async () => {
         const poolId = 'pool1cr8vpy3ta3smcxjq8hfu8n2chxhtc78ukfruqjhfgarf5azypen';
+        const pool = await client.getPool(poolId);
+        expect(pool.ticker).to.be.equal('LEAD');
+        expect(pool.description).to.be.equal('LEAD your Computer Science and Fintech Specialist - LEADing the way to a decentralisied future.')
+    }) 
+
+    it('should return pool by hash', async () => {
+        const poolId = 'c0cec0922bec61bc1a403dd3c3cd58b9aebc78fcb247c04ae947469a';
         const pool = await client.getPool(poolId);
         expect(pool.ticker).to.be.equal('LEAD');
         expect(pool.description).to.be.equal('LEAD your Computer Science and Fintech Specialist - LEADing the way to a decentralisied future.')

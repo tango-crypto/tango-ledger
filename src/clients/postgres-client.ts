@@ -870,9 +870,12 @@ export class PostgresClient implements DbClient {
 		if (!Number.isNaN(Number(poolId))) {
 			query = query 
 			.where('pool_hash.id', '=', poolId);
-		} else {
+		} else if ((poolId as string).startsWith('pool1')) {
 			query = query 
 			.where('pool_hash.view', '=', poolId);
+		} else { // hash_raw
+			query = query 
+			.whereRaw(`pool_hash.hash_raw = decode('${poolId}', 'hex')`);
 		}
 		return query
 		.orderByRaw('case when epoch.no is null then 0 else pu.registered_tx_id end desc, pu.active_epoch_no desc')
@@ -906,6 +909,7 @@ export class PostgresClient implements DbClient {
 	
 	async getDelegations(poolId: string, size = 50, order = 'desc', txId = 0): Promise<PoolDelegation[]> {
 		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId}` : `< ${txId}`;
+		const whereExpr = poolId.startsWith('pool1') ? `p.view = '${poolId}'` : `p.hash_raw = decode('${poolId}', 'hex')`;
 		return this.knex.with('delegations', 
 			this.knex.select(
 				'd.addr_id',
@@ -934,7 +938,7 @@ export class PostgresClient implements DbClient {
 				.orderByRaw('d.addr_id, d.tx_id desc')
 				.as('d'), pg => pg.on('d.pool_hash_id', 'p.id')
 			)
-			.whereRaw(`p.view = '${poolId}'${seekExpr ? ' and d.tx_id ' + seekExpr : ''}`)
+			.whereRaw(`${whereExpr}${seekExpr ? ' and d.tx_id ' + seekExpr : ''}`)
 			.orderBy('d.tx_id', order)
 			.limit(size)
 		)
