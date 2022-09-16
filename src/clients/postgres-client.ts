@@ -988,6 +988,7 @@ export class PostgresClient implements DbClient {
 	}
 
 	async getAsset(identifier: string): Promise<Asset> {
+		const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
 		return this.knex.select(
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
@@ -995,7 +996,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			this.knex.raw(`COUNT(*) as transactions`),
+			this.knex.raw(`COUNT(*) as mint_transactions`),
 			this.knex.raw(`MIN(block.time) as created_at`),
 			this.knex.raw(`array_remove(array_agg(CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END), NULL) as metadata`)
 		)
@@ -1004,11 +1005,14 @@ export class PostgresClient implements DbClient {
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'ma_tx_mint.ident')
 		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
-		.whereRaw(`asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`)
+		.whereRaw(whereExpr)
 		.groupBy('asset.policy', 'asset.name', 'asset.fingerprint')
 		.then((rows: any[]) => rows[0] || null)
 	}
 
+	/**
+	 * @deprecated since version 1.5.8. Use `getAsset` instead
+	 */
 	async getAssetByFingerprint(fingerprint: string): Promise<Asset> {
 		return this.knex.select(
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
@@ -1017,7 +1021,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
 			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			this.knex.raw(`COUNT(*) as transactions`),
+			this.knex.raw(`COUNT(*) as mint_transactions`),
 			this.knex.raw(`MIN(block.time) as created_at`),
 			this.knex.raw(`array_remove(array_agg(CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END), NULL) as metadata`)
 		)
@@ -1043,6 +1047,7 @@ export class PostgresClient implements DbClient {
 	// }
 
 	async getAssetOwners(identifier: string, size: number, order: string, address = '', quantity = ''): Promise<AssetOwner[]> {
+		const whereExpr = identifier.startsWith('asset1') ? `ma.fingerprint = '${identifier}'` : `ma.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma.name = decode('${identifier.substring(56)}', 'hex')`;
 		const seekExpr = !quantity ? '' : order == 'asc' 
 		? `(owners.address > '${address}' and owners.quantity = ${quantity}) or owners.quantity > ${quantity}` 
 		: `(owners.address < '${address}' and owners.quantity = ${quantity}) or owners.quantity < ${quantity}`;
@@ -1056,7 +1061,7 @@ export class PostgresClient implements DbClient {
 			.innerJoin({ma: 'multi_asset'}, 'ma.id', 'mto.ident')
 			.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
 			.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
-			.whereRaw(`ma.policy = decode('${identifier.substring(0, 56)}', 'hex') AND ma.name = decode('${identifier.substring(56)}', 'hex') AND tx_in.tx_in_id is null`)
+			.whereRaw(`${whereExpr} AND tx_in.tx_in_id is null`)
 		)
 		.select(
 			'owners.address',
@@ -1073,6 +1078,9 @@ export class PostgresClient implements DbClient {
 		.limit(size);
 	}
 
+	/**
+	* @deprecated since version 1.5.8. Use `getAssetOwners` instead
+	*/
 	async getAssetOwnersByFingerprint(fingerprint: string, size: number, order: string, address = '', quantity = ''): Promise<AssetOwner[]> {
 		const seekExpr = !quantity ? '' : order == 'asc' 
 		? `(owners.address > '${address}' and owners.quantity = ${quantity}) or owners.quantity > ${quantity}` 

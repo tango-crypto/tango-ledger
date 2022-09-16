@@ -6,7 +6,7 @@ const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
 const db_name = 'testnet';
-let client: PostgresClient = null;
+let client: PostgresClient;
 
 describe('pool endpoints', function () {
     this.timeout(5000); 
