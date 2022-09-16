@@ -5,8 +5,8 @@ export interface Asset {
 	asset_name: string;
 	fingerprint?: string;
 	quantity: number;
-	transactions?: number;
 	created_at?: string;
+	mint_transactions?: number;
 	mint_quantity?: number;
 	burn_quantity?: number;
 	mint_or_burn_quantity?: number;
