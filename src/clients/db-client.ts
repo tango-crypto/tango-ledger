@@ -11,6 +11,7 @@ import { Asset } from "../models/asset";
 import { Epoch } from "../models/epoch";
 import { StakeAddress } from "../models/stake-address";
 import { AssetOwner } from "../models/asset-owner";
+import { Script } from "../models/script";
 
 export interface DbClient {
 	reconnect(): void;
@@ -26,6 +27,12 @@ export interface DbClient {
 	getTransaction(id: number|string, shallow: boolean): Promise<Transaction>;
 	getTransactionTip(id: number|string): Promise<number>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
+	/**
+	 * get transaction utxos including smart contract information like: datum, redeemer and script
+	 * @param txHash transaction hash
+	 */
+	getTransactionUtxosFull(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
+	getTransactionScripts(txHash: string): Promise<Script[]>;
 	getTransactionInputUtxos(txHash: string): Promise<Utxo[]>;
 	getTransactionMetadata(txHash: string, size: number, order: string, key: number): Promise<Metadata[]>;
 	getAddressTransactionsTotal(address: string): Promise<number>;

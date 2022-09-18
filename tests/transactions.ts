@@ -5,7 +5,7 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
-const db_name = 'testnet';
+const db_name = 'testnet_new';
 let client: PostgresClient;
 
 describe('transaction endpoints', function () {
@@ -27,7 +27,7 @@ describe('transaction endpoints', function () {
     it('should get tx', async () => {
         // arrange
         // const txHash = 'ee68694c061d8cf7a99e95e8286dcad51cb487c4de313f65ef5a45013f8f00dd';
-        const txHash = '4e440eb7f5ff2492a3ff564482ec1c74d738a442e19565faa11e912d74701753';
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
 
         // act
         const tx = await client.getTransaction(txHash);
@@ -49,13 +49,35 @@ describe('transaction endpoints', function () {
 
     it('should get tx utxos', async () => {
         // arrange
-        const txHash = 'ee68694c061d8cf7a99e95e8286dcad51cb487c4de313f65ef5a45013f8f00dd';
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
 
         // act
         const utxos = await client.getTransactionUtxos(txHash);
 
         // assert
         expect(utxos).not.null;
+    });
+
+    it('should get tx utxos with scripts', async () => {
+        // arrange
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+
+        // act
+        const utxos = await client.getTransactionUtxosFull(txHash);
+
+        // assert
+        expect(utxos).not.null;
+    });
+
+    it('should get tx scripts', async () => {
+        // arrange
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+
+        // act
+        const scripts = await client.getTransactionScripts(txHash);
+
+        // assert
+        expect(scripts).not.null;
     });
 
     it('should get tx inputs/outputs', async () => {

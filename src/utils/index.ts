@@ -12,6 +12,8 @@ const Utils = {
 					index: curr.index,
 					value: curr.value, 
 					smart_contract: curr.smart_contract,
+					has_script: curr.has_script,
+					script: curr.script,
 					assets: [], 
 				};
 			}

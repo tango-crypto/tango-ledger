@@ -16,6 +16,7 @@ import { PoolDelegation } from '../models/pool-delegation';
 import { Epoch } from '../models/epoch';
 import { StakeAddress } from '../models/stake-address';
 import { AssetOwner } from '../models/asset-owner';
+import { Script } from '../models/script';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -454,6 +455,108 @@ export class PostgresClient implements DbClient {
 		});
 	}
 
+	async getTransactionUtxosFull(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}> {
+		return this.knex.select( // outputs
+			'utxo.address',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'utxo.index',
+			'utxo.value',
+			this.knex.raw('utxo.address_has_script as smart_contract'),
+			this.knex.raw('utxo.address_has_script as has_script'),
+			'mto.quantity',
+			'asset.fingerprint',
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', case when utxo.data_hash is not null then encode(utxo.data_hash, 'hex') else encode(datum.hash, 'hex') end) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+		)
+		.from<Utxo>({utxo: 'tx_out'})
+		.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+		.leftJoin('datum', pg => pg.on('datum.hash', 'utxo.data_hash').orOn('datum.id', 'utxo.inline_datum_id'))
+		.leftJoin('script', pg => pg.on('script.id', 'utxo.reference_script_id').orOn('script.hash', 'utxo.payment_cred'))
+		.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'utxo.id')
+		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
+		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+		.union(pg => pg.select( // inputs
+				'tx_out.address',
+				'tx_out.hash',
+				'tx_out.index',
+				'tx_out.value',
+				this.knex.raw('tx_out.address_has_script as smart_contract'),
+				this.knex.raw('tx_out.address_has_script as has_script'),
+				'mto.quantity',
+				'asset.fingerprint',
+				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			    this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('redeemer', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB))), '{}'::JSONB) as script`)
+			)
+			.from<Utxo>('tx_in')
+			.innerJoin(this.knex.select(
+				'tx_out.*', 
+				this.knex.raw(`encode(tx.hash, 'hex') as hash`)
+				)
+				.from('tx_out')
+				.innerJoin('tx', 'tx.id', 'tx_out.tx_id')
+				.as('tx_out'), pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index')
+			)
+			.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
+			.leftJoin('script', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
+			.leftJoin('redeemer', 'redeemer.id', 'tx_in.redeemer_id')
+			.leftJoin({rd: 'redeemer_data'}, 'rd.id', 'redeemer.redeemer_data_id')
+			.leftJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'tx_out.id')
+			.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
+			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+		)
+		.then(rows => {
+			const inputs: Utxo[] = [];
+			const outputs: Utxo[] = [];
+			rows.forEach((utxo: Utxo) => {
+				if (utxo.hash != txHash) {
+					inputs.push(utxo);
+				} else {
+					outputs.push(utxo);
+				}
+			});
+			return { hash: txHash, inputs: Utils.groupUtxoAssets(inputs), outputs: Utils.groupUtxoAssets(outputs)};
+		});
+	}
+
+	async getTransactionScripts(txHash: string): Promise<Script[]> {
+		return this.knex.select( // minting scripts
+			this.knex.raw(`distinct on (script.id) script.type`),
+			this.knex.raw(`encode(script.hash, 'hex') as hash`),
+			 `script.json`,
+			this.knex.raw(`encode(script.bytes, 'hex') as code`),
+			 `script.serialised_size`,
+			this.knex.raw('null as datum'),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as redeemer`)
+		)
+		.from<Script>('script')
+		.innerJoin({asset: 'multi_asset'}, 'asset.policy', 'script.hash')
+		.innerJoin({mtm: 'ma_tx_mint'}, 'mtm.ident', 'asset.id')
+		.innerJoin('tx', 'tx.id', 'mtm.tx_id')
+		.leftJoin('redeemer', pg => pg.on('redeemer.tx_id', 'tx.id').andOn(this.knex.raw(`(script.type = 'timelock' or redeemer.purpose = 'mint')`)))
+		.leftJoin({rd: 'redeemer_data'}, 'rd.id', 'redeemer.redeemer_data_id')
+		.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+		.union(pg => pg.select( // input scripts
+				this.knex.raw(`distinct on (script.id) script.type`),
+				this.knex.raw(`encode(script.hash, 'hex') as hash`),
+				`script.json`,
+				this.knex.raw(`encode(script.bytes, 'hex') as code`),
+				`script.serialised_size`,
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data',	NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as redeemer`)
+			)
+			.from<Script>('script')
+			.innerJoin('tx_out', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
+			.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+			.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
+			.leftJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
+			.leftJoin('redeemer', 'redeemer.id', 'tx_in.redeemer_id')
+			.leftJoin({rd:'redeemer_data'}, 'rd.id', 'redeemer.redeemer_data_id')
+			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+		);
+	}
+
 	async getTransactionInputUtxos(txHash: string): Promise<Utxo[]> {
 		return this.knex.select(
 			'tx_out.address',
@@ -604,6 +707,7 @@ export class PostgresClient implements DbClient {
 				'tx_out.index', 
 				'tx_out.value', 
 				this.knex.raw('tx_out.address_has_script as smart_contract'), 
+				this.knex.raw(`decode(tx_out.data_hash, 'hex') as data_hash`),
 				'tx_out.address'
 			)
 			.from('tx_out')
