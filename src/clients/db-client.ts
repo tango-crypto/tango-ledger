@@ -64,6 +64,16 @@ export interface DbClient {
 	getAddressAssets(address: string, size: number, order: string, fingerprint: string): Promise<Asset[]>;
 	getAddressUtxos(address: string, size: number, order: string, txId: number, index: number): Promise<Utxo[]>;
 	getAddressTransactions(address: string, size: number, order: string, txId: number): Promise<Transaction[]>;
+	/**
+	 * Returns assets utxos for an address
+	 * @param address The asset address `bech32` format (e.g. `addr1...`)
+	 * @param asset The asset identifier (fingerprint or concatenation of policy & asset_name)
+	 * @param size The number of results displayed on one page 
+	 * @param order The ordering of items from the point of view of the blockchain. By default, we return oldest first, newest last. 
+	 * @param txId The utxo transation id
+	 * @param index The utxo transaction index
+	 */
+	getAddressAssetUtxos(address: string, asset: string, size: number, order: string, txId: number, index: number): Promise<Utxo[]>;
 	getStakeUtxos(stakeAddress: string): Promise<Utxo[]>;
 	getStake(stakeAddress: string): Promise<Stake>;
 	getStakeAddress(addrId: number): Promise<StakeAddress>;

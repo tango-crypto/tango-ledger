@@ -5,7 +5,7 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 // const db_pwd = 'kraken!';
-const db_name = 'testnet';
+const db_name = 'testnet_new';
 let client: PostgresClient;
 
 describe('assets endpoints', function () {
@@ -78,6 +78,18 @@ describe('assets endpoints', function () {
         expect(owners).not.null;
       
     });
+
+    it('should get address asset utxos', async () => {
+        // arrange
+        const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
+        const asset = 'asset1r5mrxn5377473gus6jzq3n947j33flenl4qptm'
+
+        // act
+        const utxos = await client.getAddressAssetUtxos(address, asset);
+
+        // assert
+        expect(utxos).not.null;
+    })
 
     after('closing connection', async () => {
         await client.disconnect();
