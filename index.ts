@@ -14,3 +14,6 @@ export * from "./src/models/metadata";
 export * from "./src/models/stake";
 export * from "./src/models/transaction";
 export * from "./src/models/utxo";
+export * from "./src/models/script";
+export * from "./src/models/datum";
+export * from "./src/models/redeemer";
