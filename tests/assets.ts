@@ -85,7 +85,7 @@ describe('assets endpoints', function () {
         const asset = 'asset1r5mrxn5377473gus6jzq3n947j33flenl4qptm'
 
         // act
-        const utxos = await client.getAddressAssetUtxos(address, asset);
+        const utxos = await client.getAddressAssetUtxos(address, asset, 20, 'desc', 2387895, 1);
 
         // assert
         expect(utxos).not.null;

@@ -5,11 +5,11 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 // const db_pwd = 'kraken!';
-const db_name = 'testnet';
+const db_name = 'testnet_new';
 let client: PostgresClient;
 
 describe('address endpoints', function () {
-    this.timeout(5000); 
+    this.timeout(15000); 
 
     before('connecto to db-sync', async () => {
         client = new PostgresClient({

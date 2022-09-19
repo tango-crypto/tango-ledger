@@ -299,63 +299,63 @@ export class PostgresClient implements DbClient {
 			'asset.asset_name',
 			'asset.fingerprint',
 		)
-		.from<Transaction>('tx')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.innerJoin(
-			this.knex.select(
-				'tx.id as tx_id',
-				this.knex.raw(`SUM(mto.quantity) as quantity`),
-				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-				'asset.fingerprint',
-				this.knex.raw(`COALESCE(SUM(mtm.quantity), 0) as mint_or_burn_quantity`)
+			.from<Transaction>('tx')
+			.innerJoin('block', 'block.id', 'tx.block_id')
+			.innerJoin(
+				this.knex.select(
+					'tx.id as tx_id',
+					this.knex.raw(`SUM(mto.quantity) as quantity`),
+					this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+					this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+					'asset.fingerprint',
+					this.knex.raw(`COALESCE(SUM(mtm.quantity), 0) as mint_or_burn_quantity`)
+				)
+					.from({ utxo: 'tx_out' })
+					.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+					.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'utxo.id')
+					.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
+					.leftJoin({ mtm: 'ma_tx_mint' }, pg => pg.on('mtm.tx_id', 'tx.id').andOn('mtm.ident', 'asset.id'))
+					.whereRaw(whereFilter)
+					.groupBy('tx.id', 'asset.policy', 'asset.name', 'asset.fingerprint')
+					.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
 			)
-			.from({ utxo: 'tx_out' })
-			.innerJoin('tx', 'tx.id', 'utxo.tx_id')
-			.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'utxo.id')
-			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
-			.leftJoin({ mtm: 'ma_tx_mint' }, pg => pg.on('mtm.tx_id', 'tx.id').andOn('mtm.ident', 'asset.id'))
-			.whereRaw(whereFilter)
-			.groupBy('tx.id', 'asset.policy', 'asset.name', 'asset.fingerprint')
-			.as('asset'), pg => pg.on('asset.tx_id', 'tx.id')
-		)
-		.then(rows => {
-			const assets: Asset[] = rows.filter(a => a.policy_id).map(r => ({
-				mint_or_burn_quantity: r.mint_or_burn_quantity,
-				quantity: r.quantity,
-				policy_id: r.policy_id,
-				asset_name: Utils.convert(r.asset_name),
-				fingerprint: r.fingerprint
-			}));
-			const tx: Transaction = rows.length > 0 ? {
-				id: rows[0].id,
-				hash: rows[0].hash,
-				block_id: rows[0].block_id,
-				block_index: rows[0].block_index,
-				out_sum: rows[0].out_sum,
-				fee: rows[0].fee,
-				deposit: rows[0].deposit,
-				size: rows[0].size,
-				invalid_before: rows[0].invalid_before,
-				invalid_hereafter: rows[0].invalid_hereafter,
-				valid_contract: rows[0].valid_contract,
-				script_size: rows[0].script_size,
-				utxo_count: rows[0].utxo_count,
-				withdrawal_count: rows[0].withdrawal_count,
-				delegation_count: rows[0].delegation_count,
-				stake_cert_count: rows[0].stake_cert_count,
-				pool_update: rows[0].pool_update,
-				pool_retire: rows[0].pool_retire,
-				block: {
-					hash: rows[0].block_hash,
-					epoch_no: rows[0].block_epoch_no,
-					block_no: rows[0].block_block_no,
-					slot_no: rows[0].block_slot_no
-				},
-				assets: assets
-			} : null;
-			return tx;
-		});
+			.then(rows => {
+				const assets: Asset[] = rows.filter(a => a.policy_id).map(r => ({
+					mint_or_burn_quantity: r.mint_or_burn_quantity,
+					quantity: r.quantity,
+					policy_id: r.policy_id,
+					asset_name: Utils.convert(r.asset_name),
+					fingerprint: r.fingerprint
+				}));
+				const tx: Transaction = rows.length > 0 ? {
+					id: rows[0].id,
+					hash: rows[0].hash,
+					block_id: rows[0].block_id,
+					block_index: rows[0].block_index,
+					out_sum: rows[0].out_sum,
+					fee: rows[0].fee,
+					deposit: rows[0].deposit,
+					size: rows[0].size,
+					invalid_before: rows[0].invalid_before,
+					invalid_hereafter: rows[0].invalid_hereafter,
+					valid_contract: rows[0].valid_contract,
+					script_size: rows[0].script_size,
+					utxo_count: rows[0].utxo_count,
+					withdrawal_count: rows[0].withdrawal_count,
+					delegation_count: rows[0].delegation_count,
+					stake_cert_count: rows[0].stake_cert_count,
+					pool_update: rows[0].pool_update,
+					pool_retire: rows[0].pool_retire,
+					block: {
+						hash: rows[0].block_hash,
+						epoch_no: rows[0].block_epoch_no,
+						block_no: rows[0].block_block_no,
+						slot_no: rows[0].block_slot_no
+					},
+					assets: assets
+				} : null;
+				return tx;
+			});
 	}
 
 	private async getTransactionShallow(id: number | string): Promise<Transaction> {
@@ -400,12 +400,13 @@ export class PostgresClient implements DbClient {
 	}
 
 	async getTransactionUtxos(txHash: string): Promise<{ hash: string, outputs: Utxo[], inputs: Utxo[] }> {
-		return this.knex.select(
+		return this.knex.select( // outputs
 			'utxo.address',
 			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
 			'utxo.index',
 			'utxo.value',
 			this.knex.raw('utxo.address_has_script as smart_contract'),
+			this.knex.raw('utxo.address_has_script as has_script'),
 			'mto.quantity',
 			'asset.fingerprint',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
@@ -416,12 +417,13 @@ export class PostgresClient implements DbClient {
 			.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'utxo.id')
 			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
 			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-			.union(pg => pg.select(
+			.union(pg => pg.select( // inputs
 				'tx_out.address',
 				'tx_out.hash',
 				'tx_out.index',
 				'tx_out.value',
 				this.knex.raw('tx_out.address_has_script as smart_contract'),
+				this.knex.raw('tx_out.address_has_script as has_script'),
 				'mto.quantity',
 				'asset.fingerprint',
 				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
@@ -527,18 +529,33 @@ export class PostgresClient implements DbClient {
 			`script.json`,
 			this.knex.raw(`encode(script.bytes, 'hex') as code`),
 			`script.serialised_size`,
-			this.knex.raw('null as datum'),
+			this.knex.raw(`NULLIF('{}', '{}'::JSONB) as datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as redeemer`)
 		)
 			.from<Script>('script')
 			.innerJoin({ asset: 'multi_asset' }, 'asset.policy', 'script.hash')
 			.innerJoin({ mtm: 'ma_tx_mint' }, 'mtm.ident', 'asset.id')
 			.innerJoin('tx', 'tx.id', 'mtm.tx_id')
-			.leftJoin('redeemer', pg => pg.on('redeemer.tx_id', 'tx.id').andOn(this.knex.raw(`(script.type = 'timelock' or redeemer.purpose = 'mint')`)))
+			.leftJoin('redeemer', pg => pg.on('redeemer.tx_id', 'tx.id').andOn('redeemer.script_hash', 'script.hash'))
 			.leftJoin({ rd: 'redeemer_data' }, 'rd.id', 'redeemer.redeemer_data_id')
 			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
-			.union(pg => pg.select( // input scripts
-				this.knex.raw(`distinct on (script.id) script.type`),
+			.unionAll(pg => pg.select( // cert|reward|spend scripts (created in this tx)
+					this.knex.raw(`script.type`),
+					this.knex.raw(`encode(script.hash, 'hex') as hash`),
+					`script.json`,
+					this.knex.raw(`encode(script.bytes, 'hex') as code`),
+					`script.serialised_size`,
+					this.knex.raw(`NULLIF('{}', '{}'::JSONB) as datum`),
+					this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data',	NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as redeemer`)
+				)
+				.from<Script>('script')
+				.innerJoin('tx', 'tx.id', 'script.tx_id')
+				.leftJoin('redeemer', pg => pg.on('redeemer.tx_id', 'tx.id').andOn('redeemer.script_hash', 'script.hash'))
+				.leftJoin({ rd: 'redeemer_data' }, 'rd.id', 'redeemer.redeemer_data_id')
+				.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
+			)
+			.unionAll(pg => pg.select( // inputs cert|reward|spend scripts (created in previous tx)
+				this.knex.raw(`script.type`),
 				this.knex.raw(`encode(script.hash, 'hex') as hash`),
 				`script.json`,
 				this.knex.raw(`encode(script.bytes, 'hex') as code`),
@@ -551,7 +568,7 @@ export class PostgresClient implements DbClient {
 				.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
 				.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
 				.leftJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
-				.leftJoin('redeemer', 'redeemer.id', 'tx_in.redeemer_id')
+				.leftJoin('redeemer', pg => pg.on('redeemer.id', 'tx_in.redeemer_id').andOn('redeemer.script_hash', 'script.hash'))
 				.leftJoin({ rd: 'redeemer_data' }, 'rd.id', 'redeemer.redeemer_data_id')
 				.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 			);
@@ -559,17 +576,17 @@ export class PostgresClient implements DbClient {
 
 	async getTransactionCollaterals(txHash: string): Promise<{ hash: string, outputs: Utxo[], inputs: Utxo[] }> {
 		return this.knex.select( // outputs
-				'utxo.address',
-				this.knex.raw(`encode(tx.hash, 'hex') as hash`),
-				'utxo.index',
-				'utxo.value',
-				this.knex.raw('utxo.address_has_script as has_script'),
-				'mto.quantity',
-				'asset.fingerprint',
-				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', case when utxo.data_hash is not null then encode(utxo.data_hash, 'hex') else encode(datum.hash, 'hex') end) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
-			)
+			'utxo.address',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'utxo.index',
+			'utxo.value',
+			this.knex.raw('utxo.address_has_script as has_script'),
+			'mto.quantity',
+			'asset.fingerprint',
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', case when utxo.data_hash is not null then encode(utxo.data_hash, 'hex') else encode(datum.hash, 'hex') end) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+		)
 			.from<Utxo>({ utxo: 'collateral_tx_out' })
 			.innerJoin('tx', 'tx.id', 'utxo.tx_id')
 			.leftJoin('datum', pg => pg.on('datum.hash', 'utxo.data_hash').orOn('datum.id', 'utxo.inline_datum_id'))
@@ -578,20 +595,20 @@ export class PostgresClient implements DbClient {
 			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
 			.whereRaw(`tx.hash = decode('${txHash}', 'hex')`)
 			.union(pg => pg.select( // inputs
-					'tx_out.address',
-					this.knex.raw(`encode(tt_x.hash, 'hex') as hash`),
-					'tx_out.index',
-					'tx_out.value',
-					this.knex.raw('tx_out.address_has_script as has_script'),
-					'mto.quantity',
-					'asset.fingerprint',
-					this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-					this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-					this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size)), '{}'::JSONB) as script`)
-				)
-				.from<Utxo>({tx_in: 'collateral_tx_in'})
+				'tx_out.address',
+				this.knex.raw(`encode(tt_x.hash, 'hex') as hash`),
+				'tx_out.index',
+				'tx_out.value',
+				this.knex.raw('tx_out.address_has_script as has_script'),
+				'mto.quantity',
+				'asset.fingerprint',
+				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size)), '{}'::JSONB) as script`)
+			)
+				.from<Utxo>({ tx_in: 'collateral_tx_in' })
 				.innerJoin('tx_out', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
-				.innerJoin({tt_x: 'tx'}, 'tt_x.id', 'tx_out.tx_id')
+				.innerJoin({ tt_x: 'tx' }, 'tt_x.id', 'tx_out.tx_id')
 				.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
 				.leftJoin('script', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
 				.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'tx_out.id')
@@ -612,7 +629,7 @@ export class PostgresClient implements DbClient {
 			});
 	}
 
-	async getTransactionMints(txHash: string, size = 50, order = 'desc', id = -1): Promise<Asset[]>{
+	async getTransactionMints(txHash: string, size = 50, order = 'desc', id = -1): Promise<Asset[]> {
 		const seekExpr = id < 0 ? '' : order == 'asc' ? `> ${id}` : `< ${id}`;
 		return this.knex.select(
 			this.knex.raw(`ENCODE(ASSET.NAME,'hex') AS ASSET_NAME`),
@@ -621,14 +638,14 @@ export class PostgresClient implements DbClient {
 			'mtm.quantity',
 			this.knex.raw(`block.time as created_at`)
 		)
-		.from<Asset>('tx')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.leftJoin({mtm: 'ma_tx_mint'}, 'mtm.tx_id', 'tx.id')
-		.leftJoin({asset: 'multi_asset'}, 'asset.id', 'mtm.ident')
-		.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
-		.orderBy('asset.id', order)
-		.limit(size)
-		.then(rows => rows.map(a => ({...a, asset_name: Utils.convert(a.asset_name)})))
+			.from<Asset>('tx')
+			.innerJoin('block', 'block.id', 'tx.block_id')
+			.leftJoin({ mtm: 'ma_tx_mint' }, 'mtm.tx_id', 'tx.id')
+			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mtm.ident')
+			.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
+			.orderBy('asset.id', order)
+			.limit(size)
+			.then(rows => rows.map(a => ({ ...a, asset_name: Utils.convert(a.asset_name) })))
 	}
 
 	async getTransactionMetadata(txHash: string, size = 50, order = 'desc', key = -1): Promise<Metadata[]> {
@@ -637,11 +654,11 @@ export class PostgresClient implements DbClient {
 			'tx_metadata.key as label',
 			'tx_metadata.json',
 		)
-		.from<Metadata>('tx_metadata')
-		.innerJoin('tx', 'tx.id', 'tx_metadata.tx_id')
-		.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
-		.orderBy('tx_metadata.key', order)
-		.limit(size)
+			.from<Metadata>('tx_metadata')
+			.innerJoin('tx', 'tx.id', 'tx_metadata.tx_id')
+			.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
+			.orderBy('tx_metadata.key', order)
+			.limit(size)
 	}
 
 	async getTransactionInputUtxos(txHash: string): Promise<Utxo[]> {
@@ -651,6 +668,7 @@ export class PostgresClient implements DbClient {
 			'tx_out.index',
 			'tx_out.value',
 			this.knex.raw('tx_out.address_has_script as smart_contract'),
+			this.knex.raw('tx_out.address_has_script as has_script'),
 			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
@@ -781,33 +799,38 @@ export class PostgresClient implements DbClient {
 				'tx_out.id',
 				'tx_out.index',
 				'tx_out.value',
+				'tx_out.address',
 				this.knex.raw('tx_out.address_has_script as smart_contract'),
-				this.knex.raw(`decode(tx_out.data_hash, 'hex') as data_hash`),
-				'tx_out.address'
+				this.knex.raw('tx_out.address_has_script as has_script'),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', case when tx_out.data_hash is not null then encode(tx_out.data_hash, 'hex') else encode(datum.hash, 'hex') end) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
 			)
 				.from('tx_out')
 				.leftJoin('tx_in', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
-				.whereRaw(`tx_in.tx_in_id is NULL and tx_out.address = '${address}'${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
+				.leftJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
+				.leftJoin('script', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
+				.whereRaw(`tx_in.tx_in_id is NULL and tx_out.address = '${address}'${seekExpr ? ' and (tx_out.tx_id ' + seekExpr + ')' : ''}`)
 				.orderByRaw(`tx_out.tx_id ${order}, tx_out.index ${order}`)
 				.limit(size)
 		)
-		.select(
-			't.tx_id',
-			't.address',
-			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
-			't.index',
-			't.value',
-			't.smart_contract',
-			'mto.quantity',
-			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
-			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
-			'asset.fingerprint'
-		)
-		.from<Utxo>('tx')
-		.innerJoin('t', 'tx.id', 't.tx_id')
-		.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 't.id')
-		.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
-		.then(rows => Utils.groupUtxoAssets(rows));
+			.select(
+				't.tx_id',
+				't.address',
+				this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+				't.index',
+				't.value',
+				't.smart_contract',
+				't.has_script',
+				't.script',
+				'mto.quantity',
+				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+				'asset.fingerprint'
+			)
+			.from<Utxo>('tx')
+			.innerJoin('t', 'tx.id', 't.tx_id')
+			.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 't.id')
+			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
+			.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
 	async getAddressTransactions(address: string, size = 50, order = 'desc', txId = 0): Promise<Transaction[]> {
@@ -820,16 +843,16 @@ export class PostgresClient implements DbClient {
 				.orderBy('tx_out.tx_id', order)
 				.limit(size), true
 		)
-		.union(pg => pg.select(this.knex.raw('tx_in.tx_in_id as tx_id'))
-			.from('tx_out')
-			.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
-			.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_in.tx_in_id ' + seekExpr : ''}`)
-			.groupBy('tx_in.tx_in_id')
-			.orderBy('tx_in.tx_in_id', order)
+			.union(pg => pg.select(this.knex.raw('tx_in.tx_in_id as tx_id'))
+				.from('tx_out')
+				.innerJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+				.whereRaw(`tx_out.address = '${address}'${seekExpr ? ' and tx_in.tx_in_id ' + seekExpr : ''}`)
+				.groupBy('tx_in.tx_in_id')
+				.orderBy('tx_in.tx_in_id', order)
+				.limit(size)
+				, true)
+			.orderBy('tx_id', order)
 			.limit(size)
-			, true)
-		.orderBy('tx_id', order)
-		.limit(size)
 		).select(
 			'tx.id',
 			'txs.input',
@@ -844,53 +867,53 @@ export class PostgresClient implements DbClient {
 			'tx.fee',
 			'tx.out_sum'
 		)
-		.from('tx')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.innerJoin(
-			this.knex.select(
-				this.knex.raw('i.address as input'),
-				this.knex.raw('i.rn as i0'),
-				this.knex.raw('case when i.tx_id is null then o.tx_id else i.tx_id end'),
-				this.knex.raw('o.rn as o0'),
-				this.knex.raw('o.address as output')
+			.from('tx')
+			.innerJoin('block', 'block.id', 'tx.block_id')
+			.innerJoin(
+				this.knex.select(
+					this.knex.raw('i.address as input'),
+					this.knex.raw('i.rn as i0'),
+					this.knex.raw('case when i.tx_id is null then o.tx_id else i.tx_id end'),
+					this.knex.raw('o.rn as o0'),
+					this.knex.raw('o.address as output')
+				)
+					.from({
+						o: this.knex.select(
+							this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`),
+							't.tx_id',
+							'tx_out.address'
+						)
+							.from('t')
+							.innerJoin('tx_out', 'tx_out.tx_id', 't.tx_id') as any
+					}
+					)
+					.fullOuterJoin(
+						this.knex.select(
+							this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`),
+							't.tx_id',
+							'tx_out.address'
+						)
+							.from('t')
+							.innerJoin('tx_in', 'tx_in.tx_in_id', 't.tx_id')
+							.innerJoin('tx_out', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+							.as('i'), pg => pg.on('o.tx_id', 'i.tx_id').andOn('o.rn', 'i.rn')
+					)
+					.as('txs'), pg => pg.on('txs.tx_id', 'tx.id')
 			)
-				.from({
-					o: this.knex.select(
-						this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`),
-						't.tx_id',
-						'tx_out.address'
-					)
-						.from('t')
-						.innerJoin('tx_out', 'tx_out.tx_id', 't.tx_id') as any
-				}
-				)
-				.fullOuterJoin(
-					this.knex.select(
-						this.knex.raw(`row_number() OVER (partition by t.tx_id order by t.tx_id ${order}) as rn`),
-						't.tx_id',
-						'tx_out.address'
-					)
-						.from('t')
-						.innerJoin('tx_in', 'tx_in.tx_in_id', 't.tx_id')
-						.innerJoin('tx_out', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
-						.as('i'), pg => pg.on('o.tx_id', 'i.tx_id').andOn('o.rn', 'i.rn')
-				)
-				.as('txs'), pg => pg.on('txs.tx_id', 'tx.id')
-		)
-		.orderByRaw(`tx.id ${order}, txs.i0, txs.o0`)
-		.then(rows => {
-			const dict = rows.reduce((dict: any, r: any) => {
-				dict[r.hash] = (dict[r.hash] || { id: r.id, hash: r.hash, block: { block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time }, fee: r.fee, out_sum: r.out_sum, inputs: [], outputs: [] });
-				if (r['i0']) {
-					!dict[r.hash].inputs.push(r.input)
-				}
-				if (r['o0']) {
-					!dict[r.hash].outputs.push(r.output)
-				}
-				return dict;
-			}, {});
-			return Object.values(dict);
-		});
+			.orderByRaw(`tx.id ${order}, txs.i0, txs.o0`)
+			.then(rows => {
+				const dict = rows.reduce((dict: any, r: any) => {
+					dict[r.hash] = (dict[r.hash] || { id: r.id, hash: r.hash, block: { block_no: r.block_no, epoch_no: r.epoch_no, epoch_slot_no: r.epoch_slot_no, time: r.time }, fee: r.fee, out_sum: r.out_sum, inputs: [], outputs: [] });
+					if (r['i0']) {
+						!dict[r.hash].inputs.push(r.input)
+					}
+					if (r['o0']) {
+						!dict[r.hash].outputs.push(r.output)
+					}
+					return dict;
+				}, {});
+				return Object.values(dict);
+			});
 	}
 
 	async getAddressAssetUtxos(address: string, asset: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Utxo[]> {
@@ -909,17 +932,17 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`ENCODE(ASSET.NAME,'hex') AS ASSET_NAME`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', case when tx_out.data_hash is not null then encode(tx_out.data_hash, 'hex') else encode(datum.hash, 'hex') end) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
 		)
-		.from<Utxo>('tx_out')
-		.innerJoin('tx', 'tx.id', 'tx_out.tx_id')
-		.innerJoin({mto: 'ma_tx_out'}, 'mto.tx_out_id', 'tx_out.id')
-		.innerJoin({asset: 'multi_asset'}, 'asset.id', 'mto.ident')
-		.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
-		.leftJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
-		.leftJoin('script', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
-		.whereRaw(`tx_in.tx_in_id is null and tx_out.address = '${address}' and ${identifierExpr}${seekExpr ? ' and tx_out.tx_id ' + seekExpr : ''}`)
-		.orderByRaw(`tx_out.tx_id ${order}, tx_out.index ${order}`)
-		.limit(size)
-		.then(rows => Utils.groupUtxoAssets(rows));
+			.from<Utxo>('tx_out')
+			.innerJoin('tx', 'tx.id', 'tx_out.tx_id')
+			.innerJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'tx_out.id')
+			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
+			.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+			.leftJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
+			.leftJoin('script', pg => pg.on('script.id', 'tx_out.reference_script_id').orOn('script.hash', 'tx_out.payment_cred'))
+			.whereRaw(`tx_in.tx_in_id is null and tx_out.address = '${address}' and ${identifierExpr}${seekExpr ? ' and (tx_out.tx_id ' + seekExpr + ')' : ''}`)
+			.orderByRaw(`tx_out.tx_id ${order}, tx_out.index ${order}`)
+			.limit(size)
+			.then(rows => Utils.groupUtxoAssets(rows));
 	}
 
 	async getStakeUtxos(stakeAddress: string): Promise<Utxo[]> {
@@ -930,6 +953,7 @@ export class PostgresClient implements DbClient {
 			'utxo_view.index',
 			'utxo_view.value',
 			this.knex.raw('utxo_view.address_has_script as smart_contract'),
+			this.knex.raw('utxo_view.address_has_script as has_script'),
 			'mto.quantity',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
@@ -1273,12 +1297,12 @@ export class PostgresClient implements DbClient {
 				.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
 				.whereRaw(`${whereExpr} AND tx_in.tx_in_id is null`)
 		)
-		.select(
-			'owners.address',
-			'owners.quantity',
-			this.knex.raw('owners.quantity/MAX(owners.total) * 100 as share')
-		)
-		.from('owners');
+			.select(
+				'owners.address',
+				'owners.quantity',
+				this.knex.raw('owners.quantity/MAX(owners.total) * 100 as share')
+			)
+			.from('owners');
 		if (seekExpr) {
 			query = query.whereRaw(seekExpr)
 		}
