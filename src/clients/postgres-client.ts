@@ -629,8 +629,8 @@ export class PostgresClient implements DbClient {
 			});
 	}
 
-	async getTransactionMints(txHash: string, size = 50, order = 'desc', id = -1): Promise<Asset[]> {
-		const seekExpr = id < 0 ? '' : order == 'asc' ? `> ${id}` : `< ${id}`;
+	async getTransactionMints(txHash: string, size = 50, order = 'desc', identifier = ''): Promise<Asset[]> {
+		const seekExpr = !identifier ? '' : order == 'asc' ? `> '${identifier}'` : `< '${identifier}'`;
 		return this.knex.select(
 			this.knex.raw(`ENCODE(ASSET.NAME,'hex') AS ASSET_NAME`),
 			this.knex.raw(`ENCODE(ASSET.POLICY,'hex') AS POLICY_ID`),
@@ -642,8 +642,8 @@ export class PostgresClient implements DbClient {
 			.innerJoin('block', 'block.id', 'tx.block_id')
 			.leftJoin({ mtm: 'ma_tx_mint' }, 'mtm.tx_id', 'tx.id')
 			.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mtm.ident')
-			.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and tx_metadata.key ' + seekExpr : ''}`)
-			.orderBy('asset.id', order)
+			.whereRaw(`tx.hash = decode('${txHash}', 'hex')${seekExpr ? ' and asset.fingerprint ' + seekExpr : ''}`)
+			.orderBy('asset.fingerprint', order)
 			.limit(size)
 			.then(rows => rows.map(a => ({ ...a, asset_name: Utils.convert(a.asset_name) })))
 	}

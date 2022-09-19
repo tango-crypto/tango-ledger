@@ -46,10 +46,10 @@ export interface DbClient {
 	 * Returns transaction assets mints
 	 * @param txHash The transaction hash
 	 * @param size The number of results displayed on one page 
-	 * @param order The ordering of items from the point of view of the blockchain. By default, we return oldest first, newest last. 
-	 * @param id The asset id to start looking for (depending on order `asc` or `desc`)	 
+	 * @param order The ordering of items from the point of view of lexicografic fingerprint. By default, we return oldest first, newest last. 
+	 * @param identifier The asset fingerprint to start looking for (depending on order `asc` or `desc`)	 
 	 */
-	getTransactionMints(txHash: string, size: number, order: string, id: number): Promise<Asset[]>;
+	getTransactionMints(txHash: string, size: number, order: string, identifier: string): Promise<Asset[]>;
 	/**
 	 * get transaction metadata
 	 * @param txHash transaction hash
