@@ -28,13 +28,37 @@ export interface DbClient {
 	getTransactionTip(id: number|string): Promise<number>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
 	/**
-	 * get transaction utxos including smart contract information like: datum, redeemer and script
-	 * @param txHash transaction hash
+	 * Returns transaction utxos including smart contract information like: datum, redeemer and script
+	 * @param txHash The transaction hash
 	 */
 	getTransactionUtxosFull(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
+	/**
+	 * Returns transaction scripts both native and plutus
+	 * @param txHash The transaction hash
+	 */
 	getTransactionScripts(txHash: string): Promise<Script[]>;
-	getTransactionInputUtxos(txHash: string): Promise<Utxo[]>;
+	/**
+	 * Returns transaction collaterals utxos
+	 * @param txHash The transaction hash
+	 */
+	getTransactionCollaterals(txHash: string): Promise<{ hash: string, outputs: Utxo[], inputs: Utxo[] }>;
+	/**
+	 * Returns transaction assets mints
+	 * @param txHash The transaction hash
+	 * @param size The number of results displayed on one page 
+	 * @param order The ordering of items from the point of view of the blockchain. By default, we return oldest first, newest last. 
+	 * @param id The asset id to start looking for (depending on order `asc` or `desc`)	 
+	 */
+	getTransactionMints(txHash: string, size: number, order: string, id: number): Promise<Asset[]>;
+	/**
+	 * get transaction metadata
+	 * @param txHash transaction hash
+	 * @param size The number of results displayed on one page 
+	 * @param order The ordering of items from the point of view of the blockchain. By default, we return oldest first, newest last. 
+	 * @param key The metadata key to start looking for (depending on order `asc` or `desc`)
+	 */
 	getTransactionMetadata(txHash: string, size: number, order: string, key: number): Promise<Metadata[]>;
+	getTransactionInputUtxos(txHash: string): Promise<Utxo[]>;
 	getAddressTransactionsTotal(address: string): Promise<number>;
 	getAddressBalance(address: string): Promise<number>;
 	getAddressAssets(address: string, size: number, order: string, fingerprint: string): Promise<Asset[]>;

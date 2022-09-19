@@ -69,6 +69,17 @@ describe('transaction endpoints', function () {
         expect(utxos).not.null;
     });
 
+    it('should get tx utxo collaterals', async () => {
+        // arrange
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+
+        // act
+        const utxos = await client.getTransactionCollaterals(txHash);
+
+        // assert
+        expect(utxos).not.null;
+    });
+
     it('should get tx scripts', async () => {
         // arrange
         const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
@@ -78,6 +89,17 @@ describe('transaction endpoints', function () {
 
         // assert
         expect(scripts).not.null;
+    });
+
+    it('should get tx mints', async () => {
+        // arrange
+        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+
+        // act
+        const assets = await client.getTransactionMints(txHash);
+
+        // assert
+        expect(assets).not.null;
     });
 
     it('should get tx inputs/outputs', async () => {
