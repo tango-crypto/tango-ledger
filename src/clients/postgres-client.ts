@@ -1411,7 +1411,7 @@ export class PostgresClient implements DbClient {
 			'monetary_expand_rate as monetary_expand_rate_rho',
 			'treasury_growth_rate as treasury_growth_rate_tau',
 			'decentralisation',
-			'extra_entropy',
+			this.knex.raw(`encode(extra_entropy, 'hex') as extra_entropy`),
 			'protocol_major',
 			'protocol_minor',
 			'min_utxo_value as min_utxo',
