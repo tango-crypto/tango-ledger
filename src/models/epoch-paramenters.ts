@@ -15,7 +15,7 @@ export interface EpochParameters {
 	monetary_expand_rate_rho?: number,
 	treasury_growth_rate_tau?: number,
 	decentralisation?: number,
-	extra_entropy: string;
+	extra_entropy?: string;
 	protocol_major?: number,
 	protocol_minor?: number,
 	min_utxo?: number,
