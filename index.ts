@@ -17,3 +17,4 @@ export * from "./src/models/utxo";
 export * from "./src/models/script";
 export * from "./src/models/datum";
 export * from "./src/models/redeemer";
+export * from "./src/models/cost-model";

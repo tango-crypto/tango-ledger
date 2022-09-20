@@ -87,7 +87,7 @@ export interface DbClient {
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;
 	getDelegations(poolId: string, size: number, order: string, txId: number): Promise<PoolDelegation[]>;
 	getLatestEpoch(): Promise<Epoch>;
-	getEpochParamters(epoch: number): Promise<EpochParameters>;
+	getEpochParameters(epoch: number): Promise<EpochParameters>;
 	registerEvent(event: string, args: any, callback: (msg: any) => void): void; // args should expect table_name, operation (INSERT|UPDATE ...) trigger config etc
 	listenEvent(event: string, callback: (msg: any) => void): void;
 }

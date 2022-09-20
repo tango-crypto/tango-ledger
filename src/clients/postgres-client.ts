@@ -1395,7 +1395,7 @@ export class PostgresClient implements DbClient {
 			.then((rows: any[]) => rows[0])
 	}
 
-	async getEpochParamters(epoch: number): Promise<EpochParameters> {
+	async getEpochParameters(epoch: number): Promise<EpochParameters> {
 		return this.knex.select(
 			'epoch_no',
 			'min_fee_a',
@@ -1411,15 +1411,28 @@ export class PostgresClient implements DbClient {
 			'monetary_expand_rate as monetary_expand_rate_rho',
 			'treasury_growth_rate as treasury_growth_rate_tau',
 			'decentralisation',
+			'extra_entropy',
 			'protocol_major',
 			'protocol_minor',
 			'min_utxo_value as min_utxo',
 			'min_pool_cost',
 			this.knex.raw(`encode(nonce, 'hex') as nonce`),
-			'block_id',
+			'coins_per_utxo_size',
+			'price_mem',
+			'price_step',
+			'max_tx_ex_mem',
+			'max_tx_ex_steps',
+			'max_block_ex_mem',
+			'max_block_ex_steps',
+			'max_val_size',
+			'collateral_percent',
+			'max_collateral_inputs',
+			'epoch.block_id',
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(cost_model.hash, 'hex')) || JSONB_BUILD_OBJECT('costs', cost_model.costs) || JSONB_BUILD_OBJECT('block_id', cost_model.block_id)), '{}'::JSONB) as cost_model`)
 		)
-			.from<EpochParameters>('epoch_param')
-			.where('epoch_param.epoch_no', '=', epoch)
+			.from<EpochParameters>({epoch: 'epoch_param'})
+			.leftJoin('cost_model', 'cost_model.id', 'epoch.cost_model_id')
+			.where('epoch.epoch_no', '=', epoch)
 			.first();
 	}
 

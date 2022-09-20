@@ -1,3 +1,5 @@
+import { CostModel } from "./cost-model";
+
 export interface EpochParameters {
 	epoch_no?: number,
 	min_fee_a?: number,
@@ -18,5 +20,16 @@ export interface EpochParameters {
 	min_utxo?: number,
 	min_pool_cost?: number,
 	nonce: string,
+	coins_per_utxo_size?: number;
+	price_mem?: number;
+	price_step?: number;
+	max_tx_ex_mem?: number;
+	max_tx_ex_steps?: number;
+	max_block_ex_mem?: number;
+	max_block_ex_steps?: number;
+	max_val_size?: number;
+	collateral_percent?: number;
+	max_collateral_inputs?: number;
 	block_id?: number;
+	cost_model?: CostModel;
 }

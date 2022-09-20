@@ -5,8 +5,8 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
-const db_name = 'testnet';
-let client: PostgresClient = null;
+const db_name = 'testnet_new';
+let client: PostgresClient;
 
 describe('epoch endpoints', function () {
     this.timeout(5000); 
@@ -37,10 +37,10 @@ describe('epoch endpoints', function () {
 
     it('should get epoch parameters', async () => {
         // arrange
-        const epoch = 153;
+        const epoch = 229;
 
         // act
-        const parameters = await client.getEpochParamters(epoch);
+        const parameters = await client.getEpochParameters(epoch);
 
         // assert
         expect(parameters).not.null;
