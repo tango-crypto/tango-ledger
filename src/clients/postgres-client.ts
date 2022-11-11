@@ -1064,7 +1064,7 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(hash_raw, 'hex') as hash`),
 			'view as address',
 			this.knex.raw(`encode(script_hash, 'hex') as script_hash`),
-			'registered_tx_id'
+			'tx_id'
 		)
 			.from('stake_address')
 			.where('stake_address.id', '=', addrId)
