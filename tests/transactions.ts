@@ -5,7 +5,7 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
-const db_name = 'testnet_new';
+const db_name = 'testnet_preprod';
 let client: PostgresClient;
 
 describe('transaction endpoints', function () {
@@ -60,7 +60,9 @@ describe('transaction endpoints', function () {
 
     it('should get tx utxos with scripts', async () => {
         // arrange
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        // const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
+        const txHash = '8d700398e7111426af585ee427f97d728c22604404478e44df6d64c3166bc389';
+        // const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
 
         // act
         const utxos = await client.getTransactionUtxosFull(txHash);
@@ -71,7 +73,7 @@ describe('transaction endpoints', function () {
 
     it('should get tx utxo collaterals', async () => {
         // arrange
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
 
         // act
         const utxos = await client.getTransactionCollaterals(txHash);

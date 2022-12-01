@@ -11,8 +11,9 @@ const Utils = {
 					hash: curr.hash,
 					index: curr.index,
 					value: curr.value, 
-					smart_contract: curr.smart_contract,
 					has_script: curr.has_script,
+					inline_datum: curr.inline_datum,
+					reference_script: curr.reference_script,
 					script: curr.script,
 					assets: [], 
 				};

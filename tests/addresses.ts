@@ -5,7 +5,7 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 // const db_pwd = 'kraken!';
-const db_name = 'testnet_new';
+const db_name = 'testnet_preprod';
 let client: PostgresClient;
 
 describe('address endpoints', function () {
@@ -48,10 +48,27 @@ describe('address endpoints', function () {
 
     it('should get address utxos', async () => {
         // arrange
-        const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
+        // const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
+        const address = 'addr_test1qqe5wnjzkhrgfvntj3dndzml7003h0n5ezen924qjrrglv6648u33jzvq2msza6gyqdcnau0njhav2sv46adkc9c8wdqx5aas8';
 
         // act
-        const utxos = await client.getAddressUtxos(address, 30, 'desc', 2507820, 1);
+        // const utxos = await client.getAddressUtxos(address, 30, 'desc', 2507820, 1);
+        const utxos = await client.getAddressUtxos(address);
+
+        // assert
+        expect(utxos).not.null;
+       
+    })
+
+    it('should get address asset utxos', async () => {
+        // arrange
+        // const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
+        const address = 'addr_test1wzluyf6hzw8z9dg4nme04qe4yzlk7gzd7hmhctafpeap46qshz4mn';
+        const asset = 'asset1gk6pv38w62xtztfavrghtj98gcuc73w07ldlwk';
+
+        // act
+        // const utxos = await client.getAddressUtxos(address, 30, 'desc', 2507820, 1);
+        const utxos = await client.getAddressAssetUtxos(address, asset);
 
         // assert
         expect(utxos).not.null;
