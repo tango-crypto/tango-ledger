@@ -17,6 +17,7 @@ import { Epoch } from '../models/epoch';
 import { StakeAddress } from '../models/stake-address';
 import { AssetOwner } from '../models/asset-owner';
 import { Script } from '../models/script';
+import { Redeemer } from '../models/redeemer';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -1448,6 +1449,27 @@ export class PostgresClient implements DbClient {
 			.leftJoin('cost_model', 'cost_model.id', 'epoch.cost_model_id')
 			.where('epoch.epoch_no', '=', epoch)
 			.first();
+	}
+
+	async getScriptRedeemers(hash: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Redeemer[]> {
+		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId} or (tx.id = ${txId} and r.index > ${index})` : `< ${txId} or (tx.id = ${txId} and r.index < ${index})`;
+		return this.knex.select(
+			this.knex.raw(`tx.id as tx_id`),
+			this.knex.raw(`encode(tx.hash,'hex') as hash`),
+			'r.index',
+			'r.unit_mem',
+			'r.unit_steps',
+			'r.fee',
+			'r.purpose',
+			this.knex.raw(`encode(r.script_hash,'hex') as script_hash`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB) as data`)
+		)
+		.from({r: 'redeemer'})
+		.innerJoin('tx', 'tx.id', 'r.tx_id')
+		.leftJoin({rd: 'redeemer_data'}, 'rd.id', 'r.redeemer_data_id')
+		.whereRaw(`r.script_hash = decode('${hash}', 'hex')${seekExpr ? ' and (tx.id ' + seekExpr + ')' : ''}`)
+		.orderByRaw(`tx.id ${order}, r.index ${order}`)
+		.limit(size)
 	}
 
 	// TODO: create the trigger function and trigger on DB based on `args`
