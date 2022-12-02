@@ -23,6 +23,31 @@ describe('script endpoints', function () {
         });
     });
 
+    it('should get script (SC)', async () => {
+        // arrange
+        const hash = 'bfc22757138e22b5159ef2fa833520bf6f204df5f77c2fa90e7a1ae8';
+
+        // act
+        const script = await client.getScript(hash);
+
+        // assert
+        expect(script.code).not.null;
+        expect(script.serialised_size).not.null;
+      
+    });
+
+    it('should get script (native)', async () => {
+        // arrange
+        const hash = '18ed282beda4bec13226c427d4744d2642ba2cef404470b62ae184d8';
+
+        // act
+        const script = await client.getScript(hash);
+
+        // assert
+        expect(script.json).not.null;
+      
+    });
+
     it('should get script redeemers', async () => {
         // arrange
         const hash = 'bfc22757138e22b5159ef2fa833520bf6f204df5f77c2fa90e7a1ae8';

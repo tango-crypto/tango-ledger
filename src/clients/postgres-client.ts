@@ -1451,6 +1451,20 @@ export class PostgresClient implements DbClient {
 			.first();
 	}
 
+	async getScript(hash: string): Promise<Script> {
+		return this.knex.select(
+			'script.type',
+			this.knex.raw(`encode(script.hash, 'hex') as hash`),
+			'script.serialised_size',
+			'script.json',
+			this.knex.raw(`encode(script.bytes, 'hex') as code`),
+		)
+		.from('script')
+		.whereRaw(`script.hash = decode('${hash}', 'hex')`)
+		.limit(1)
+		.then((rows: any[]) => rows[0])
+	}
+
 	async getScriptRedeemers(hash: string, size = 50, order = 'desc', txId = 0, index = 0): Promise<Redeemer[]> {
 		const seekExpr = txId <= 0 ? '' : order == 'asc' ? `> ${txId} or (tx.id = ${txId} and r.index > ${index})` : `< ${txId} or (tx.id = ${txId} and r.index < ${index})`;
 		return this.knex.select(

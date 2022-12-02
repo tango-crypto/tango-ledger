@@ -89,6 +89,7 @@ export interface DbClient {
 	getDelegations(poolId: string, size: number, order: string, txId: number): Promise<PoolDelegation[]>;
 	getLatestEpoch(): Promise<Epoch>;
 	getEpochParameters(epoch: number): Promise<EpochParameters>;
+	getScript(hash: string): Promise<Script>;
 	getScriptRedeemers(hash: string, size: number, order: string): Promise<Redeemer[]>;
 	registerEvent(event: string, args: any, callback: (msg: any) => void): void; // args should expect table_name, operation (INSERT|UPDATE ...) trigger config etc
 	listenEvent(event: string, callback: (msg: any) => void): void;
