@@ -5,7 +5,7 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 // const db_pwd = 'kraken!';
-const db_name = 'testnet_new';
+const db_name = 'testnet_preprod';
 let client: PostgresClient;
 
 describe('assets endpoints', function () {
@@ -27,7 +27,7 @@ describe('assets endpoints', function () {
     it('should get asset', async () => {
         // arrange
         // const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
-        const identifier = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
+        const identifier = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
 
         // act
         const asset = await client.getAsset(identifier);
@@ -40,7 +40,7 @@ describe('assets endpoints', function () {
     it('should get asset by fingerprint', async () => {
         // arrange
         // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
-        const fingerprint = 'asset1dz7d9v3xs8sf9sljw82ux0sh6x4qfq37nu7kdw';
+        const fingerprint = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
 
         // act
         const asset = await client.getAssetByFingerprint(fingerprint);
@@ -53,42 +53,42 @@ describe('assets endpoints', function () {
     it('should get asset owners', async () => {
         // arrange
         // const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
-        const identifier = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
-        const address = 'addr_test1qphzuz2250w0zljmt24x37c36nu8nyhv2s8nced4u7psfegtg2ckq83t2adz9gv0y0d0hyz0yj6dmendf7enpze0y33qm8wldn';
+        const identifier = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
+        const address = 'addr_test1vps3wzu4p22rthzx3cllq0e5ylzr0dv9mjv9s30ku23ahsqss9vw3';
 
         // act
         const owners = await client.getAssetOwners(identifier, 10, 'asc', address);
 
         // assert
-        expect(owners).not.null;
+        expect(owners.length).to.be.greaterThan(1);
       
     });
 
     it('should get asset owners by fingerprint', async () => {
         // arrange
-        const fingerprint = 'asset1ee0u29k4xwauf0r7w8g30klgraxw0y4rz2t7xs';
-        const address = 'addr_test1qpwd4nthqsfvjcdmj7x9y0cus4eds8s3na9ke2tmkdmjezw2nzfdp07su08s0x8egzyfdkjk0t7d45e59t4ky8x5drrsawh0d8';
+        const fingerprint = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
+        const address = 'addr_test1vps3wzu4p22rthzx3cllq0e5ylzr0dv9mjv9s30ku23ahsqss9vw3';
         const quantity = '2';
 
         // act
         const owners = await client.getAssetOwnersByFingerprint(fingerprint, 4, 'asc', address, quantity);
-        console.log(owners);
 
         // assert
-        expect(owners).not.null;
+        expect(owners.length).to.be.greaterThan(1);
       
     });
 
     it('should get address asset utxos', async () => {
         // arrange
-        const address = 'addr_test1wrhtrx98lc6dc2zk0uuv0hjjcrffq5fvllq9k7u6cajfvhq0rqywz';
-        const asset = 'asset1r5mrxn5377473gus6jzq3n947j33flenl4qptm'
+        const address = 'addr_test1qp9mj7vnenx4v99hw7ztfq03n7dmmujpgtlyfjhhel9w67nk72usllcew208n60ym94xcptfrgytuy5apwp565x28jgsg0ztq3';
+        const asset = 'asset1z6tx0vvw9c8hajeca8mheymy6uuznflxdlxysw'
 
         // act
-        const utxos = await client.getAddressAssetUtxos(address, asset, 20, 'desc', 2387895, 1);
+        const utxos = await client.getAddressAssetUtxos(address, asset, 20, 'desc', 351576, 2);
+        // const utxos = await client.getAddressAssetUtxos(address, asset);
 
         // assert
-        expect(utxos).not.null;
+        expect(utxos.length).to.be.greaterThan(0);
     })
 
     after('closing connection', async () => {

@@ -5,8 +5,8 @@ const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
 const db_pwd = 'kraken!';
-const db_name = 'testnet';
-let client: PostgresClient = null;
+const db_name = 'testnet_preprod';
+let client: PostgresClient;
 
 describe('block endpoints', function () {
     this.timeout(5000); 
@@ -27,25 +27,21 @@ describe('block endpoints', function () {
     describe('blocks', function() {
 
         it('should return block transactions by block id', async () => {
-            const blockId = 3379424;
+            const blockId = 474390;
             const trannsactions = await client.getBlockTransactionsById(blockId);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
 
         it('should return block transactions by block #', async () => {
-            const blockNoOrHash = '18483364e53f83d96572d852fe2dbdbd174fa522b99ba9efedb42da0212e99d4'; 
+            const blockNoOrHash = '28f0384b75e6a715495f791ad4548720e78292bf031ba442a652cbf2b2be9e76'; 
             // const blockNoOrHash = 3174184; 
-            const trannsactions = await client.getBlockTransactions(blockNoOrHash, 4, 'asc', 2670018);
+            const trannsactions = await client.getBlockTransactions(blockNoOrHash, 4, 'asc', 197149);
             expect(trannsactions.length).to.be.greaterThanOrEqual(0);
         });
 
         it('should return latest block tip (no join data)', async () => {
-            try {
-                const block_no = await client.getLatestBlockTip();
-                expect(block_no).to.be.greaterThan(1);
-            } catch(err) {
-                console.log(err);
-            }
+            const block_no = await client.getLatestBlockTip();
+            expect(block_no).to.be.greaterThan(1);
         })
     });
 

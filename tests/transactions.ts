@@ -27,7 +27,7 @@ describe('transaction endpoints', function () {
     it('should get tx', async () => {
         // arrange
         // const txHash = 'ee68694c061d8cf7a99e95e8286dcad51cb487c4de313f65ef5a45013f8f00dd';
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
 
         // act
         const tx = await client.getTransaction(txHash);
@@ -49,7 +49,7 @@ describe('transaction endpoints', function () {
 
     it('should get tx utxos', async () => {
         // arrange
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
 
         // act
         const utxos = await client.getTransactionUtxos(txHash);
@@ -84,7 +84,7 @@ describe('transaction endpoints', function () {
 
     it('should get tx scripts', async () => {
         // arrange
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
 
         // act
         const scripts = await client.getTransactionScripts(txHash);
@@ -95,7 +95,7 @@ describe('transaction endpoints', function () {
 
     it('should get tx mints', async () => {
         // arrange
-        const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
+        const txHash = '9ecc78eea93fd09240b1ccf3ea231b3c052400ca936869d078290d7717cae189';
 
         // act
         const assets = await client.getTransactionMints(txHash);
