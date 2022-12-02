@@ -18,6 +18,7 @@ import { StakeAddress } from '../models/stake-address';
 import { AssetOwner } from '../models/asset-owner';
 import { Script } from '../models/script';
 import { Redeemer } from '../models/redeemer';
+import { Datum } from '../models/datum';
 
 export class PostgresClient implements DbClient {
 	knex: Knex;
@@ -1453,6 +1454,7 @@ export class PostgresClient implements DbClient {
 
 	async getScript(hash: string): Promise<Script> {
 		return this.knex.select(
+			'script.tx_id',
 			'script.type',
 			this.knex.raw(`encode(script.hash, 'hex') as hash`),
 			'script.serialised_size',
@@ -1484,6 +1486,19 @@ export class PostgresClient implements DbClient {
 		.whereRaw(`r.script_hash = decode('${hash}', 'hex')${seekExpr ? ' and (tx.id ' + seekExpr + ')' : ''}`)
 		.orderByRaw(`tx.id ${order}, r.index ${order}`)
 		.limit(size)
+	}
+
+	async getDatum(hash: string): Promise<Datum> {
+		return this.knex.select(
+			'datum.tx_id',
+			this.knex.raw(`encode(datum.hash, 'hex') as hash`),
+			'datum.value',
+			this.knex.raw(`encode(datum.bytes, 'hex') as value_raw`),
+		)
+		.from('datum')
+		.whereRaw(`datum.hash = decode('${hash}', 'hex')`)
+		.limit(1)
+		.then((rows: any[]) => rows[0])
 	}
 
 	// TODO: create the trigger function and trigger on DB based on `args`
