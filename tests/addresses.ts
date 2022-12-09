@@ -56,7 +56,7 @@ describe('address endpoints', function () {
         const utxos = await client.getAddressUtxos(address);
 
         // assert
-        expect(utxos).not.null;
+        expect(utxos.length).to.be.greaterThanOrEqual(0)
        
     })
 
@@ -71,7 +71,7 @@ describe('address endpoints', function () {
         const utxos = await client.getAddressAssetUtxos(address, asset);
 
         // assert
-        expect(utxos).not.null;
+        expect(utxos.length).to.be.greaterThanOrEqual(0)
        
     })
 

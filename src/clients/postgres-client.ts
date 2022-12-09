@@ -468,12 +468,14 @@ export class PostgresClient implements DbClient {
 			'asset.fingerprint',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(utxo.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+			this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(utxo.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) else null end as script`)
 		)
 			.from<Utxo>({ utxo: 'tx_out' })
 			.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+			.leftJoin('datum', 'datum.hash', 'utxo.data_hash')
 			.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'utxo.inline_datum_id'))
 			.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'utxo.reference_script_id'))
 			.leftJoin('script', pg => pg.on('script.hash', 'utxo.payment_cred'))
@@ -490,9 +492,10 @@ export class PostgresClient implements DbClient {
 				'asset.fingerprint',
 				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB)) || JSONB_BUILD_OBJECT('redeemer', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB))), '{}'::JSONB) as script`)
+				this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB)) || JSONB_BUILD_OBJECT('redeemer', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('unit_mem', redeemer.unit_mem) || JSONB_BUILD_OBJECT('unit_steps', redeemer.unit_steps) || JSONB_BUILD_OBJECT('index', redeemer.index) || JSONB_BUILD_OBJECT('fee', redeemer.fee) || JSONB_BUILD_OBJECT('purpose', redeemer.purpose) || JSONB_BUILD_OBJECT('script_hash', encode(redeemer.script_hash, 'hex')) || JSONB_BUILD_OBJECT('data', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(rd.hash, 'hex')) || JSONB_BUILD_OBJECT('value', rd.value) || JSONB_BUILD_OBJECT('value_raw', encode(rd.bytes, 'hex'))), '{}'::JSONB))), '{}'::JSONB))), '{}'::JSONB) else null end as script`)
 			)
 				.from<Utxo>('tx_in')
 				.innerJoin(this.knex.select(
@@ -504,6 +507,7 @@ export class PostgresClient implements DbClient {
 					.as('tx_out'), pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index')
 				)
 				.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
+				.leftJoin('datum', 'datum.hash', 'tx_out.data_hash')
 				.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'tx_out.inline_datum_id'))
 				.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'tx_out.reference_script_id'))
 				.leftJoin('script', pg => pg.on('script.hash', 'tx_out.payment_cred'))
@@ -590,12 +594,14 @@ export class PostgresClient implements DbClient {
 			'asset.fingerprint',
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(utxo.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+			this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(utxo.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) else null end as script`)
 		)
 			.from<Utxo>({ utxo: 'collateral_tx_out' })
 			.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+			.leftJoin('datum', 'datum.hash', 'utxo.data_hash')
 			.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'utxo.inline_datum_id'))
 			.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'utxo.reference_script_id'))
 			.leftJoin('script', pg => pg.on('script.hash', 'utxo.payment_cred'))
@@ -612,14 +618,16 @@ export class PostgresClient implements DbClient {
 				'asset.fingerprint',
 				this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 				this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size)), '{}'::JSONB) as script`)
+				this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size)), '{}'::JSONB) else null end as script`)
 			)
 				.from<Utxo>({ tx_in: 'collateral_tx_in' })
 				.innerJoin('tx_out', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
 				.innerJoin({ tt_x: 'tx' }, 'tt_x.id', 'tx_out.tx_id')
 				.innerJoin('tx', 'tx.id', 'tx_in.tx_in_id')
+				.leftJoin('datum', 'datum.hash', 'tx_out.data_hash')
 				.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'tx_out.inline_datum_id'))
 				.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'tx_out.reference_script_id'))
 				.leftJoin('script', pg => pg.on('script.hash', 'tx_out.payment_cred'))
@@ -812,12 +820,14 @@ export class PostgresClient implements DbClient {
 				'tx_out.value',
 				'tx_out.address',
 				this.knex.raw('tx_out.address_has_script as has_script'),
+				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-				this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+				this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) else null end as script`)
 			)
 				.from('tx_out')
 				.leftJoin('tx_in', pg => pg.on('tx_out.tx_id', 'tx_in.tx_out_id').andOn('tx_out.index', 'tx_in.tx_out_index'))
+				.leftJoin('datum', 'datum.hash', 'tx_out.data_hash')
 				.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'tx_out.inline_datum_id'))
 				.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'tx_out.reference_script_id'))
 				.leftJoin('script', pg => pg.on('script.hash', 'tx_out.payment_cred'))
@@ -832,6 +842,7 @@ export class PostgresClient implements DbClient {
 				't.index',
 				't.value',
 				't.has_script',
+				't.datum',
 				't.inline_datum',
 				't.reference_script',
 				't.script',
@@ -944,15 +955,17 @@ export class PostgresClient implements DbClient {
 			`asset.fingerprint`,
 			this.knex.raw(`ENCODE(ASSET.POLICY,'hex') AS POLICY_ID`),
 			this.knex.raw(`ENCODE(ASSET.NAME,'hex') AS ASSET_NAME`),
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(datum.bytes, 'hex'))), '{}'::JSONB) as datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(inline_datum.hash, 'hex')) || JSONB_BUILD_OBJECT('value', inline_datum.value) || JSONB_BUILD_OBJECT('value_raw', encode(inline_datum.bytes, 'hex'))), '{}'::JSONB) as inline_datum`),
 			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', reference_script.type) || JSONB_BUILD_OBJECT('hash', encode(reference_script.hash, 'hex')) || JSONB_BUILD_OBJECT('json', reference_script.json) || JSONB_BUILD_OBJECT('code', encode(reference_script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', reference_script.serialised_size)), '{}'::JSONB) as reference_script`),
-			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) as script`)
+			this.knex.raw(`case when script.id is not null then NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('type', script.type) || JSONB_BUILD_OBJECT('hash', encode(script.hash, 'hex'))  || JSONB_BUILD_OBJECT('json', script.json) || JSONB_BUILD_OBJECT('code', encode(script.bytes, 'hex')) || JSONB_BUILD_OBJECT('serialised_size', script.serialised_size) || JSONB_BUILD_OBJECT('datum', NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(tx_out.data_hash, 'hex'))), '{}'::JSONB))), '{}'::JSONB) else null end as script`)
 		)
 			.from<Utxo>('tx_out')
 			.innerJoin('tx', 'tx.id', 'tx_out.tx_id')
 			.innerJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'tx_out.id')
 			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
 			.leftJoin('tx_in', pg => pg.on('tx_in.tx_out_id', 'tx_out.tx_id').andOn('tx_in.tx_out_index', 'tx_out.index'))
+			.leftJoin('datum', 'datum.hash', 'tx_out.data_hash')
 			.leftJoin({inline_datum: 'datum'}, pg => pg.on('inline_datum.id', 'tx_out.inline_datum_id'))
 			.leftJoin({reference_script: 'script'}, pg => pg.on('reference_script.id', 'tx_out.reference_script_id'))
 			.leftJoin('script', pg => pg.on('script.hash', 'tx_out.payment_cred'))

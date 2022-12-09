@@ -12,6 +12,7 @@ const Utils = {
 					index: curr.index,
 					value: curr.value, 
 					has_script: curr.has_script,
+					datum: curr.datum,
 					inline_datum: curr.inline_datum,
 					reference_script: curr.reference_script,
 					script: curr.script,

@@ -14,6 +14,9 @@ export interface Utxo {
 	asset_name?: string;
 	fingerprint?: string;
 	assets?: Asset[];
+	datum_hash?: string;
+	datum?: Datum;
+	inline_datum_hash?: string;
 	inline_datum?: Datum;
 	reference_script?: Script;
 	script?: Script;
