@@ -91,6 +91,39 @@ describe('assets endpoints', function () {
         expect(utxos.length).to.be.greaterThan(0);
     })
 
+    it('should get asset most updated metadata', async () => {
+        // arrange
+        const asset = 'asset1l6rg97vuuqf7ycqyz5lwkmvzu4s2hdqdlk0yk2';
+        const data = {
+            "json": {
+              "82955346406aab553b90945f90139f2779bb3644340edbb46da23011": {
+                "MyAmazingNFT": {
+                  "name": "NFT FTW: MyAmazingNFT",
+                  "image": "ipfs://XXXXYYYYZZZZ"
+                }
+              }
+            },
+            "label": 721
+          }
+
+        // act
+        const metadata = await client.getAssetMetadata(asset);
+
+        // assert
+        expect(metadata).deep.equal(data);
+    })
+
+    it('should get asset most updated metadata (null)', async () => {
+        // arrange
+        const asset = 'asset1pw50g9mztknd9ww0kw5ky6vldvjhjg3yqm2g0z';
+
+        // act
+        const metadata = await client.getAssetMetadata(asset);
+
+        // assert
+        expect(metadata).to.be.null;
+    })
+
     after('closing connection', async () => {
         await client.disconnect();
     })

@@ -84,6 +84,7 @@ export interface DbClient {
 	getAssetByFingerprint(fingerprint: string): Promise<Asset>;
 	getAssetOwners(identifier: string, size: number, order: string, address: string, quantity: string): Promise<AssetOwner[]>;
 	getAssetOwnersByFingerprint(fingerprint: string, size: number, order: string, address: string, quantity: string): Promise<AssetOwner[]>
+	getAssetMetadata(identifier: string): Promise<Metadata>
 	getPolicyAssets(policyId: string): Promise<Asset[]>;
 	getPool(poolId: string): Promise<Pool>;
 	getPoolBySlotLeader(slot_leader: number): Promise<Pool>;

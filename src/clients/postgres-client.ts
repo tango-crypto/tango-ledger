@@ -1273,6 +1273,20 @@ export class PostgresClient implements DbClient {
 			.then((rows: any[]) => rows[0] || null)
 	}
 
+	async getAssetMetadata(identifier: string): Promise<Metadata> {
+		const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
+		return this.knex.select(
+			this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) as metadata`)
+		)
+		.from<Metadata>({ asset: 'multi_asset' })
+		.innerJoin('ma_tx_mint', 'ma_tx_mint.ident', 'asset.id')
+		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'ma_tx_mint.tx_id')
+		.whereRaw(`${whereExpr} AND tx_metadata.key IS NOT NULL`)
+		.orderBy('ma_tx_mint.tx_id', 'desc')
+		.limit(1)
+		.then((rows: any[]) => rows[0]?.metadata || null)
+	}
+
 	/**
 	 * @deprecated since version 1.5.8. Use `getAsset` instead
 	 */
