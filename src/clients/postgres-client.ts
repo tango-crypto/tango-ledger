@@ -1263,7 +1263,6 @@ export class PostgresClient implements DbClient {
 			// 		this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 			// 		this.knex.raw(`COUNT(*) as mint_transactions`),
 			// 		this.knex.raw(`MIN(block.time) as created_at`),
-			// 		this.knex.raw(`MAX(block.time) as updated_at`),
 			// 		this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
 			// 		this.knex.raw(`MAX(tx_out.tx_id) FILTER (WHERE tx_out.data_hash IS NOT NULL) as last_metadata_datum_tx_id`),
 			// 		this.knex.raw(`MAX(tx_out.tx_id) FILTER (WHERE tx_out.inline_datum_id IS NOT NULL) as last_metadata_inline_datum_tx_id`),
@@ -1326,7 +1325,6 @@ export class PostgresClient implements DbClient {
 					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 					this.knex.raw(`COUNT(*) as mint_transactions`),
 					this.knex.raw(`MIN(block.time) as created_at`),
-					this.knex.raw(`MAX(block.time) as updated_at`),
 					this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
 				)
 				.from<Asset>('ma_tx_mint')
@@ -1380,7 +1378,6 @@ export class PostgresClient implements DbClient {
 					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 					this.knex.raw(`COUNT(*) as mint_transactions`),
 					this.knex.raw(`MIN(block.time) as created_at`),
-					this.knex.raw(`MAX(block.time) as updated_at`),
 					this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
 				)
 				.from<Asset>('ma_tx_mint')
@@ -1481,7 +1478,6 @@ export class PostgresClient implements DbClient {
 				this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
 				this.knex.raw(`COUNT(*) as mint_transactions`),
 				this.knex.raw(`MIN(block.time) as created_at`),
-				this.knex.raw(`MAX(block.time) as updated_at`),
 				this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_metadata_tx_id`),
 			)
 				.from<Asset>('ma_tx_mint')
