@@ -62,7 +62,7 @@ describe('transaction endpoints', function () {
         // arrange
         // const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';
         // const txHash = '8d700398e7111426af585ee427f97d728c22604404478e44df6d64c3166bc389';
-        const txHash = '8502fe3617b70d12fc65c8c17dab8483f5a7f847e0fba0376fe7abacf4773262';
+        const txHash = '86ec66890a0f7738418ae0554d4e5403f595bfb33fb9a907094185e69a8f6540';
         // const txHash = '122128d2f72f77ab6bf8fb3f95b13f820b7c08a7ba2cab9c1d4ae5422f97d3fd';
 
         // act

@@ -3,5 +3,4 @@ export interface StakeAddress {
     hash: string;
     address: string;
     script_hash: string;
-    tx_id: number; 
 }

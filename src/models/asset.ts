@@ -3,9 +3,11 @@ import { Metadata } from "./metadata";
 export interface Asset {
 	policy_id: string;
 	asset_name: string;
+	asset_name_label?: number;
 	fingerprint?: string;
 	quantity: number;
 	created_at?: string;
+	updated_at?: string;
 	mint_transactions?: number;
 	mint_quantity?: number;
 	burn_quantity?: number;

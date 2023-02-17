@@ -1,5 +1,11 @@
 import { Utxo } from "../models/utxo";
 
+const CIP68_STANDARD: {[key:string]: number} = {
+	'000643b0': 100, // Reference Token
+	'000de140': 222, // NFT Token
+	'0014de40': 333, // FT token
+}
+
 const Utils = {
 	groupUtxoAssets: function(utxos: Utxo[]) {
 		const groups = utxos.reduce((acc: {[key: string]: Utxo}, curr) => { 
@@ -24,8 +30,8 @@ const Utils = {
 				acc[key].assets.push({
 					quantity: curr.quantity,
 					policy_id: curr.policy_id,
-					asset_name: Utils.convert(curr.asset_name),
-					fingerprint: curr.fingerprint
+					...Utils.convertAssetName(curr.asset_name),
+					fingerprint: curr.fingerprint,
 				})
 			}
 			return acc; 
@@ -34,11 +40,20 @@ const Utils = {
 		return Object.keys(groups).map(addr => ({ ...groups[addr]}));
 	},
 
-	convert: function(text: string, encoding: BufferEncoding = 'hex') {
+	convertAssetName: function(asset_name: string, encoding: BufferEncoding = 'hex') {
+		const result: any = {};
+		if (!asset_name) return result;
+		const asset_name_label = CIP68_STANDARD[asset_name.substring(0, 8)];
+		const real_asset_name = asset_name_label ? asset_name.substring(8) : asset_name;
+		if (asset_name_label) {
+			result.asset_name_label = asset_name_label;
+		}
 		try {
-			return Buffer.from(text, encoding).toString('utf8');
+			result.asset_name = Buffer.from(real_asset_name, encoding).toString('utf8');
+			return result;
 		} catch(err) {
-			return text;
+			result.asset_name = real_asset_name;
+			return result;
 		}
 	}
 }
