@@ -37,6 +37,31 @@ describe('assets endpoints', function () {
       
     });
 
+    it('should get asset with metadata', async () => {
+        // arrange
+        const identifier = '82955346406aab553b90945f90139f2779bb3644340edbb46da230114d79416d617a696e674e4654';
+        // const identifier = 'asset1l6rg97vuuqf7ycqyz5lwkmvzu4s2hdqdlk0yk2';
+
+        // act
+        const asset = await client.getAsset(identifier);
+
+        // assert
+        expect(asset.metadata?.length).equal(1);
+      
+    });
+
+    it('should get asset with utxo metadata', async () => {
+        // arrange
+        const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
+        // const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
+
+        // act
+        const asset = await client.getAsset(identifier);
+
+        // assert
+        expect(asset.metadata?.length).equal(1);
+    });
+
     it('should get asset by fingerprint', async () => {
         // arrange
         // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
@@ -94,7 +119,7 @@ describe('assets endpoints', function () {
     it('should get asset most updated metadata', async () => {
         // arrange
         const asset = 'asset1l6rg97vuuqf7ycqyz5lwkmvzu4s2hdqdlk0yk2';
-        const data = {
+        const data = [{
             "json": {
               "82955346406aab553b90945f90139f2779bb3644340edbb46da23011": {
                 "MyAmazingNFT": {
@@ -104,7 +129,7 @@ describe('assets endpoints', function () {
               }
             },
             "label": 721
-          }
+          }]
 
         // act
         const metadata = await client.getAssetMetadata(asset);
@@ -115,14 +140,30 @@ describe('assets endpoints', function () {
 
     it('should get asset most updated metadata (null)', async () => {
         // arrange
-        const asset = 'asset1pw50g9mztknd9ww0kw5ky6vldvjhjg3yqm2g0z';
+        const asset = 'asset17nxg4qz9wz8mwhhkryglg8myk803qfhwlv6y2r';
 
         // act
         const metadata = await client.getAssetMetadata(asset);
 
         // assert
-        expect(metadata).to.be.null;
+        expect(metadata.length).to.be.equal(0);
     })
+
+    it('should get asset most updated datum metadata', async () => {
+        // arrange
+        // const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
+        const identifier = 'asset17nxg4qz9wz8mwhhkryglg8myk803qfhwlv6y2r';
+        const label = '100';
+
+        // act
+        const metadata = await client.getAssetUtxoMetadata(identifier);
+        console.log(metadata);
+        
+
+        // assert
+        expect(metadata[0].label).equal(label);
+      
+    });
 
     after('closing connection', async () => {
         await client.disconnect();

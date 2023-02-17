@@ -1,4 +1,4 @@
 export interface Metadata {
-	label: string;
+	label: string | number;
 	json: any;
 }
