@@ -1442,7 +1442,7 @@ export class PostgresClient implements DbClient {
 		.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
 		.innerJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
 		.whereRaw(whereExpr)
-		.orderBy('tx_out.tx_id', 'desc')
+		.orderByRaw('tx_out.tx_id desc nulls last')
 		.limit(1)
 		.then((rows: any[]) => rows.map(r => Utils.convertDatumToMetadata(r.policy_id, r.asset_name, r.metadata, r.value)))
 	}
