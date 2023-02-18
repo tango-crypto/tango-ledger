@@ -1416,31 +1416,19 @@ export class PostgresClient implements DbClient {
 			this.knex.select(
 				this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
 			)
-				.from<Asset>('ma_tx_mint')
-				.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-				.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-				.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
-				.whereRaw(whereExpr)
+			.from<Asset>('ma_tx_mint')
+			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
+			.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
+			.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
+			.whereRaw(whereExpr)
 		)
-			.select(
-				this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`)
-			)
-			.from('asset')
-			.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
-			.whereRaw('TX_METADATA.KEY IS NOT NULL')
-			.then((rows: any[]) => rows.map(r => r.metadata));
-
-		// const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
-		// return this.knex.select(
-		// 	this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) as metadata`)
-		// )
-		// 	.from<Metadata>({ asset: 'multi_asset' })
-		// 	.innerJoin('ma_tx_mint', 'ma_tx_mint.ident', 'asset.id')
-		// 	.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'ma_tx_mint.tx_id')
-		// 	.whereRaw(`${whereExpr} AND tx_metadata.key IS NOT NULL`)
-		// 	.orderBy('ma_tx_mint.tx_id', 'desc')
-		// 	// .limit(1)
-		// 	.then((rows: any[]) => rows)
+		.select(
+			this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`)
+		)
+		.from('asset')
+		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
+		.whereRaw('TX_METADATA.KEY IS NOT NULL')
+		.then((rows: any[]) => rows.map(r => r.metadata));
 	}
 
 	async getAssetUtxoMetadata(identifier: string): Promise<Metadata[]> {
@@ -1449,19 +1437,16 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
 			this.knex.raw(`encode(asset.name, 'hex') as asset_name`),
 			this.knex.raw(`datum.value as value`),
-			this.knex.raw(`encode(datum.bytes, 'hex') as metadata`),
-			this.knex.raw(`inline_datum.value as inline_value`),
-			this.knex.raw(`encode(inline_datum.bytes, 'hex') as inline_metadata`),
+			this.knex.raw(`encode(datum.bytes, 'hex') as metadata`)
 		)
-			.from<Asset>({ asset: 'multi_asset' })
-			.innerJoin({ mto: 'ma_tx_out' }, 'mto.ident', 'asset.id')
-			.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
-			.leftJoin('datum', 'datum.hash', 'tx_out.data_hash')
-			.leftJoin({inline_datum: 'datum'}, 'inline_datum.id', 'tx_out.inline_datum_id')
-			.whereRaw(whereExpr)
-			.orderBy('tx_out.tx_id', 'desc')
-			.limit(1)
-			.then((rows: any[]) => rows.map(r => Utils.convertDatumToMetadata(r.policy_id, r.asset_name, (r.metadata || r.inline_metadata), (r.value || r.inline_value))))
+		.from<Asset>({ asset: 'multi_asset' })
+		.innerJoin({ mto: 'ma_tx_out' }, 'mto.ident', 'asset.id')
+		.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
+		.innerJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
+		.whereRaw(whereExpr)
+		.orderBy('tx_out.tx_id', 'desc')
+		.limit(1)
+		.then((rows: any[]) => rows.map(r => Utils.convertDatumToMetadata(r.policy_id, r.asset_name, r.metadata, r.value)))
 	}
 
 	/**

@@ -52,8 +52,8 @@ describe('assets endpoints', function () {
 
     it('should get asset with utxo metadata', async () => {
         // arrange
-        const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
-        // const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
+        // const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
+        const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
 
         // act
         const asset = await client.getAsset(identifier);
@@ -157,11 +157,22 @@ describe('assets endpoints', function () {
 
         // act
         const metadata = await client.getAssetUtxoMetadata(identifier);
-        console.log(metadata);
-        
 
         // assert
         expect(metadata[0].label).equal(label);
+      
+    });
+
+    it('should get asset most updated datum metadata (null)', async () => {
+        // arrange
+        // const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
+        const identifier = 'asset1l6rg97vuuqf7ycqyz5lwkmvzu4s2hdqdlk0yk2';
+
+        // act
+        const metadata = await client.getAssetUtxoMetadata(identifier);
+
+        // assert
+        expect(metadata.length).equal(0);
       
     });
 

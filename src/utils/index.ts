@@ -82,7 +82,8 @@ const Utils = {
 		const { asset_name: name, asset_name_label } = Utils.convertAssetName(asset_name);
 		let json;
 		try {
-			const [metadata, version] = JSON.parse(PlutusData.from_hex(raw).to_json(0)).fields;
+			const datum = JSON.parse(PlutusData.from_hex(raw).to_json(0));
+			const [metadata, version] = datum.fields;
 			json = {
 				[policy_id]: {
 					[name]: metadata
