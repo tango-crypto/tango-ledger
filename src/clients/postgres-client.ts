@@ -1414,20 +1414,18 @@ export class PostgresClient implements DbClient {
 		const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
 		return this.knex.with('asset',
 			this.knex.select(
-				this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
+				this.knex.raw(`MAX(tx_metadata.tx_id) as last_minted_tx_id`),
 			)
 			.from<Asset>('ma_tx_mint')
 			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-			.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-			.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
+			.innerJoin('tx_metadata', 'tx_metadata.tx_id', 'ma_tx_mint.tx_id')
 			.whereRaw(whereExpr)
 		)
 		.select(
-			this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`)
+			this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) as metadata`)
 		)
 		.from('asset')
-		.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
-		.whereRaw('TX_METADATA.KEY IS NOT NULL')
+		.innerJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
 		.then((rows: any[]) => rows.map(r => r.metadata));
 	}
 
