@@ -26,14 +26,27 @@ describe('assets endpoints', function () {
 
     it('should get asset', async () => {
         // arrange
-        // const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
-        const identifier = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
+        const identifier = 'fb2b3a629a09014e28d0a54fc06499af12127c79b0bc1c39478da1dd7449534b59';
+        // const identifier = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
 
         // act
         const asset = await client.getAsset(identifier);
 
         // assert
         expect(asset).not.null;
+      
+    });
+
+    it('should not get asset', async () => {
+        // arrange
+        const identifier = 'b3fd2e8b5764818d9b33e2bc8d9e84a61fa39e75cf0c41393ee6c7a9456e6456696f6c656e6365506c61737469633437393761';
+        // const identifier = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
+
+        // act
+        const asset = await client.getAsset(identifier);
+
+        // assert
+        expect(asset).be.null;
       
     });
 

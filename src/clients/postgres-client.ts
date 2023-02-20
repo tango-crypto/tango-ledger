@@ -1277,30 +1277,19 @@ export class PostgresClient implements DbClient {
 		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
 		.innerJoin('block', 'block.id', 'tx.block_id')
 		.whereRaw(whereExpr)
-		.then<Asset>((rows: any[]) => {
-			if (rows.length > 0) {
-				const asset = rows[0];
-				const metadata: Metadata[] = [];
-				for (const r of rows) {
-					if (r.metadata) {
-						metadata.push(r.metadata);
-					}
-				}
-				return { ...asset, metadata };
-			} else {
-				return null;
-			}
-		});
-		if (asset && (!assetName || isCIP68)) { // the identifier was CIP68 Standard or a fingerprint (we'll know only after first request or if it's CIP68 Standard)
-			const { asset_name, asset_name_label } = Utils.convertAssetName(asset.asset_name);
-			if (isCIP68 || Utils.isCIP68Standard(asset.asset_name)) { // get utxo metadata for CIP68 Standard
+		.then<Asset>((rows: any[]) => rows[0].policy_id ? rows[0] : null);
+		if (asset) {
+			asset.metadata = asset.metadata || [];
+			const original_asset_name = asset.asset_name;
+			const { asset_name, asset_name_label } = Utils.convertAssetName(original_asset_name);
+			asset.asset_name = asset_name;
+			if (isCIP68 || Utils.isCIP68Standard(original_asset_name)) { // the identifier was CIP68 Standard or fingerprint (know after db request if it's CIP68 Standard)
 				asset.asset_name_label = asset_name_label;
-				const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, asset.asset_name);
+				const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, original_asset_name);
 				// build reference asset_name;
 				let metadata = await this.getAssetUtxoMetadata(refenceAsset);
 				asset.metadata.push(...metadata.map(m => ({...m, label: asset_name_label})));
 			}
-			asset.asset_name = asset_name;
 		}
 		return asset;
 	}
