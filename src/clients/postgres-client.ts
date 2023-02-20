@@ -1250,183 +1250,70 @@ export class PostgresClient implements DbClient {
 	}
 
 	async getAsset(identifier: string): Promise<Asset> {
+		// try to extract the asset name to check for CIP68 Standard
 		const { whereExpr, assetName } = identifier.startsWith('asset1') ? { whereExpr: `asset.fingerprint = '${identifier}'`, assetName: '' } : { whereExpr: `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`, assetName: identifier.substring(56) };
 		const isCIP68 = Utils.isCIP68Standard(assetName);
-		if (!assetName || isCIP68) { // the identifier was a fingerprint so we'll know only after first request or if it's CIP68 Standard
-			// return this.knex.with('asset',
-			// 	this.knex.select(
-			// 		this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
-			// 		this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
-			// 		this.knex.raw(`MIN(asset.fingerprint) as asset_name`),
-			// 		this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-			// 		this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
-			// 		this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			// 		this.knex.raw(`COUNT(*) as mint_transactions`),
-			// 		this.knex.raw(`MIN(block.time) as created_at`),
-			// 		this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
-			// 		this.knex.raw(`MAX(tx_out.tx_id) FILTER (WHERE tx_out.data_hash IS NOT NULL) as last_metadata_datum_tx_id`),
-			// 		this.knex.raw(`MAX(tx_out.tx_id) FILTER (WHERE tx_out.inline_datum_id IS NOT NULL) as last_metadata_inline_datum_tx_id`),
-			// 	)
-			// 	.from<Asset>('ma_tx_mint')
-			// 	.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-			// 	.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-			// 	.innerJoin('block', 'block.id', 'tx.block_id')
-			// 	.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
-			// 	.leftJoin({mto: 'ma_tx_out'}, 'mto.ident', 'asset.id')
-			// 	.leftJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
-			// 	.whereRaw(whereExpr)
-			// )
-			// .select(
-			// 	'asset.*',
-			// 	this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`),
-			// 	this.knex.raw(`datum.tx_id as datum_tx_id`),
-			// 	this.knex.raw(`inline_datum.tx_id as inline_datum_tx_id`),
-			// 	this.knex.raw(`datum.value as datum`),
-			// 	this.knex.raw(`inline_datum.value as inline_datum`),
-			// )
-			// .from('asset')
-			// .leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
-			// .leftJoin('datum', 'datum.tx_id', 'asset.last_metadata_datum_tx_id')
-			// .leftJoin({ inline_datum: 'datum' }, 'inline_datum.tx_id', 'asset.last_metadata_inline_datum_tx_id')
-			// .then((rows: any[]) => {
-			// 	if (rows.length > 0) {
-			// 		const { datum_tx_id, inline_datum_tx_id, datum, inline_datum, ...asset } = rows[0];
-			// 		const metadata: Metadata[] = [];
-			// 		let max = Number.MIN_SAFE_INTEGER;
-			// 		let lastDatum: any = null;
-			// 		for (const r of rows) {
-			// 			if (r.metadata) {
-			// 				metadata.push(r.metadata);
-			// 			}
-			// 			if (r.datum_tx_id && r.datum_tx_id > max) {
-			// 				max = r.datum_tx_id;
-			// 				lastDatum = r.datum;
-			// 			}
-			// 			if (r.inline_datum_tx_id && r.inline_datum_tx_id > max) {
-			// 				max = r.inline_datum_tx_id;
-			// 				lastDatum = r.inline_datum;
-			// 			}
-			// 		}
-			// 		if (lastDatum) {
-			// 			Utils.convertDatumToMetadata(assetName, lastDatum);
-			// 		}
-			// 		return { ...asset, ...Utils.convertAssetName(asset.asset_name), metadata };
-			// 	} else {
-			// 		return null;
-			// 	}
-			// });
-			let asset = await this.knex.with('asset',
-				this.knex.select(
-					this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
-					this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
-					this.knex.raw(`MIN(asset.fingerprint) as fingerprint`),
-					this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
-					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-					this.knex.raw(`COUNT(*) as mint_transactions`),
-					this.knex.raw(`MIN(block.time) as created_at`),
-					this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
-				)
-				.from<Asset>('ma_tx_mint')
-				.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-				.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-				.innerJoin('block', 'block.id', 'tx.block_id')
-				.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
-				.whereRaw(whereExpr)
+		let asset = await this.knex.with('asset_metadata',
+			this.knex.select(
+				this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
 			)
-			.select(
-				'asset.*',
-				this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`)
-			)
-			.from<Asset>('asset')
-			.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
-			.then<Asset>((rows: any[]) => {
-				if (rows.length > 0) {
-					const asset = rows[0];
-					const metadata: Metadata[] = [];
-					for (const r of rows) {
-						if (r.metadata) {
-							metadata.push(r.metadata);
-						}
+			.from<Asset>('tx_metadata')
+			.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
+		)
+		.select(
+			this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
+			this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
+			this.knex.raw(`MIN(asset.fingerprint) as fingerprint`),
+			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (WHERE ma_tx_mint.quantity > 0),0) AS mint_quantity`),
+			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
+			this.knex.raw(`COUNT(ma_tx_mint.tx_id) as mint_transactions`),
+			this.knex.raw(`MIN(block.time) as created_at`),
+			this.knex.raw(`(SELECT encode(tx.hash, 'hex') FROM tx WHERE tx.id = MIN(ma_tx_mint.tx_id)) as initial_mint_tx_hash`),
+			this.knex.raw(`(SELECT array_agg(metadata) FROM asset_metadata) as metadata`),
+		)
+		.from<Asset>('ma_tx_mint')
+		.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
+		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
+		.innerJoin('block', 'block.id', 'tx.block_id')
+		.whereRaw(whereExpr)
+		.then<Asset>((rows: any[]) => {
+			if (rows.length > 0) {
+				const asset = rows[0];
+				const metadata: Metadata[] = [];
+				for (const r of rows) {
+					if (r.metadata) {
+						metadata.push(r.metadata);
 					}
-					return { ...asset, metadata };
-				} else {
-					return null;
 				}
-			});
-			if (asset) {
-				const { asset_name, asset_name_label } = Utils.convertAssetName(asset.asset_name);
-				if (isCIP68 || Utils.isCIP68Standard(asset.asset_name)) { // check if CIP68 Standard
-					asset.asset_name_label = asset_name_label;
-					const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, asset.asset_name);
-					// build reference asset_name;
-					let metadata = await this.getAssetUtxoMetadata(refenceAsset);
-					asset.metadata.push(...metadata.map(m => ({...m, label: asset_name_label})));
-				}
-				asset.asset_name = asset_name;
+				return { ...asset, metadata };
+			} else {
+				return null;
 			}
-			return asset;
-
-		} else { // we extract the asset name but isn't CIP68 Standard
-			return this.knex.with('asset',
-				this.knex.select(
-					this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
-					this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
-					this.knex.raw(`MIN(asset.fingerprint) as fingerprint`),
-					this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity > 0), 0) as mint_quantity`),
-					this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-					this.knex.raw(`COUNT(*) as mint_transactions`),
-					this.knex.raw(`MIN(block.time) as created_at`),
-					this.knex.raw(`MAX(tx.id) FILTER (WHERE TX_METADATA.KEY IS NOT NULL) as last_minted_tx_id`),
-				)
-				.from<Asset>('ma_tx_mint')
-				.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-				.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-				.innerJoin('block', 'block.id', 'tx.block_id')
-				.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'tx.id')
-				.whereRaw(whereExpr)
-			)
-			.select(
-				'asset.*',
-				this.knex.raw(`CASE WHEN TX_METADATA.KEY IS NOT NULL THEN JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) ELSE NULL END as metadata`)
-			)
-			.from('asset')
-			.leftJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
-			.then((rows: any[]) => {
-				if (rows.length > 0) {
-					const asset = rows[0];
-					const metadata: Metadata[] = [];
-					for (const r of rows) {
-						if (r.metadata) {
-							metadata.push(r.metadata);
-						}
-					}
-					return { ...asset, ...Utils.convertAssetName(asset.asset_name), metadata };
-				} else {
-					return null;
-				}
-			});
+		});
+		if (asset && (!assetName || isCIP68)) { // the identifier was CIP68 Standard or a fingerprint (we'll know only after first request or if it's CIP68 Standard)
+			const { asset_name, asset_name_label } = Utils.convertAssetName(asset.asset_name);
+			if (isCIP68 || Utils.isCIP68Standard(asset.asset_name)) { // get utxo metadata for CIP68 Standard
+				asset.asset_name_label = asset_name_label;
+				const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, asset.asset_name);
+				// build reference asset_name;
+				let metadata = await this.getAssetUtxoMetadata(refenceAsset);
+				asset.metadata.push(...metadata.map(m => ({...m, label: asset_name_label})));
+			}
+			asset.asset_name = asset_name;
 		}
+		return asset;
 	}
 
 	async getAssetMetadata(identifier: string): Promise<Metadata[]> {
 		const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
-		return this.knex.with('asset',
-			this.knex.select(
-				this.knex.raw(`MAX(tx_metadata.tx_id) as last_minted_tx_id`),
-			)
-			.from<Asset>('ma_tx_mint')
-			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-			.innerJoin('tx_metadata', 'tx_metadata.tx_id', 'ma_tx_mint.tx_id')
-			.whereRaw(whereExpr)
+		return this.knex.select(
+				this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
 		)
-		.select(
-			this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) as metadata`)
-		)
-		.from('asset')
-		.innerJoin('tx_metadata', 'tx_metadata.tx_id', 'asset.last_minted_tx_id')
+		.from<Asset>('tx_metadata')
+		.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
 		.then((rows: any[]) => rows.map(r => r.metadata));
+		
 	}
 
 	async getAssetUtxoMetadata(identifier: string): Promise<Metadata[]> {

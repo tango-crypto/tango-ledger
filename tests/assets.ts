@@ -37,6 +37,19 @@ describe('assets endpoints', function () {
       
     });
 
+    it('should get asset by fingerprint', async () => {
+        // arrange
+        // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
+        const fingerprint = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
+
+        // act
+        const asset = await client.getAsset(fingerprint);
+
+        // assert
+        expect(asset).not.null;
+      
+    });
+
     it('should get asset with metadata', async () => {
         // arrange
         const identifier = '82955346406aab553b90945f90139f2779bb3644340edbb46da230114d79416d617a696e674e4654';
@@ -50,7 +63,32 @@ describe('assets endpoints', function () {
       
     });
 
+    it('should get asset by fingerprint with metadata', async () => {
+        // arrange
+        // const identifier = '82955346406aab553b90945f90139f2779bb3644340edbb46da230114d79416d617a696e674e4654';
+        const identifier = 'asset1l6rg97vuuqf7ycqyz5lwkmvzu4s2hdqdlk0yk2';
+
+        // act
+        const asset = await client.getAsset(identifier);
+
+        // assert
+        expect(asset.metadata?.length).equal(1);
+      
+    });
+
     it('should get asset with utxo metadata', async () => {
+        // arrange
+        const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
+        // const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
+
+        // act
+        const asset = await client.getAsset(identifier);
+
+        // assert
+        expect(asset.metadata?.length).equal(1);
+    });
+
+    it('should get asset by fingerprint with utxo metadata', async () => {
         // arrange
         // const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
         const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
@@ -60,19 +98,6 @@ describe('assets endpoints', function () {
 
         // assert
         expect(asset.metadata?.length).equal(1);
-    });
-
-    it('should get asset by fingerprint', async () => {
-        // arrange
-        // const fingerprint = 'asset1uq7kmkq4re85zgxtuzweayl23lgs7tjytw24u2';
-        const fingerprint = 'asset1xa965epc4j0jzun4uuujrhhvwec7fyscjpxnfa';
-
-        // act
-        const asset = await client.getAssetByFingerprint(fingerprint);
-
-        // assert
-        expect(asset).not.null;
-      
     });
 
     it('should get asset owners', async () => {
