@@ -83,6 +83,46 @@ describe('transaction endpoints', function () {
         expect(utxos).not.null;
     });
 
+    it('should get tx utxo', async () => {
+         // arrange
+         const txHash = '53507d7675d9c3c7174698d48da732ca8f228da9236c82cb89cd56520ca05a32';
+         const index = 1;
+
+         // act
+         const utxo = await client.getTransactionUtxo(txHash, index);
+ 
+         // assert
+         expect(utxo).not.null;
+         expect(utxo.assets?.length).equal(1)
+    })
+
+    it('should get tx utxo (shallow)', async () => {
+         // arrange
+         const txHash = '53507d7675d9c3c7174698d48da732ca8f228da9236c82cb89cd56520ca05a32';
+         const index = 1;
+         const address = 'addr_test1wr2x24tlcpr37sjrscaqsh6z4tue3k7zx8qt8n0kscen2jct0wkz7'
+
+         // act
+         const utxo = await client.getTransactionUtxoShallow(txHash, index);
+ 
+         // assert
+         expect(utxo).not.null;
+         expect(utxo.assets).undefined;
+         expect(utxo.address).equal(address);
+    })
+
+    it('should get null tx utxo', async () => {
+         // arrange
+         const txHash = '53507d7675d9c3c7174698d48da732ca8f228da9236c82cb89cd56520ca05a32';
+         const index = 16;
+
+         // act
+         const utxo = await client.getTransactionUtxo(txHash, index);
+ 
+         // assert
+         expect(utxo).null;
+    })
+
     it('should get tx scripts', async () => {
         // arrange
         const txHash = 'a6ea1b7f2c96db8f097534a17f45cfa8934c9e9d70a0737b0ad90d7549de2724';

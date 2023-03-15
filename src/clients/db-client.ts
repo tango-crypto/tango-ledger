@@ -29,6 +29,8 @@ export interface DbClient {
 	getTransaction(id: number|string, shallow: boolean): Promise<Transaction>;
 	getTransactionTip(id: number|string): Promise<number>;
 	getTransactionUtxos(txHash: string): Promise<{hash: string, outputs: Utxo[], inputs: Utxo[]}>;
+	getTransactionUtxo(id: string, index: number): Promise<Utxo>;
+	getTransactionUtxoShallow(id: string, index: number): Promise<Utxo>;
 	/**
 	 * Returns transaction utxos including smart contract information like: datum, redeemer and script
 	 * @param txHash The transaction hash

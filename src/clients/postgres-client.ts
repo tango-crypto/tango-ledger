@@ -531,6 +531,46 @@ export class PostgresClient implements DbClient {
 			});
 	}
 
+	async getTransactionUtxo(txHash: string, index: number): Promise<Utxo> {
+		return this.knex.select( // outputs
+			'utxo.address',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'utxo.index',
+			'utxo.value',
+			this.knex.raw('utxo.address_has_script as has_script'),
+			'mto.quantity',
+			'asset.fingerprint',
+			this.knex.raw(`encode(asset.policy, 'hex') as policy_id`),
+			this.knex.raw(`encode(asset.name, 'hex') as asset_name`)
+		)
+		.from<Utxo>({ utxo: 'tx_out' })
+		.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+		.leftJoin({ mto: 'ma_tx_out' }, 'mto.tx_out_id', 'utxo.id')
+		.leftJoin({ asset: 'multi_asset' }, 'asset.id', 'mto.ident')
+		.whereRaw(`tx.hash = decode('${txHash}', 'hex') AND utxo.index = ${index}`)
+		.then(r => {
+			if (r.length > 0) {
+				return Utils.groupUtxoAssets(r)[0]
+			} else {
+				return null
+			}
+		});
+	}
+
+	async getTransactionUtxoShallow(txHash: string, index: number): Promise<Utxo> {
+		return this.knex.select( // outputs
+			'utxo.address',
+			this.knex.raw(`encode(tx.hash, 'hex') as hash`),
+			'utxo.index',
+			'utxo.value',
+			this.knex.raw('utxo.address_has_script as has_script'),
+		)
+		.from<Utxo>({ utxo: 'tx_out' })
+		.innerJoin('tx', 'tx.id', 'utxo.tx_id')
+		.whereRaw(`tx.hash = decode('${txHash}', 'hex') AND utxo.index = ${index}`)
+		.then(r => r[0]);
+	}
+
 	async getTransactionScripts(txHash: string): Promise<Script[]> {
 		return this.knex.select( // minting scripts
 			this.knex.raw(`distinct on (script.id) script.type`),
@@ -1257,27 +1297,27 @@ export class PostgresClient implements DbClient {
 			this.knex.select(
 				this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
 			)
-			.from<Asset>('tx_metadata')
-			.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
+				.from<Asset>('tx_metadata')
+				.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
 		)
-		.select(
-			this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
-			this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
-			this.knex.raw(`MIN(asset.fingerprint) as fingerprint`),
-			this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
-			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (WHERE ma_tx_mint.quantity > 0),0) AS mint_quantity`),
-			this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
-			this.knex.raw(`COUNT(ma_tx_mint.tx_id) as mint_transactions`),
-			this.knex.raw(`MIN(block.time) as created_at`),
-			this.knex.raw(`(SELECT encode(tx.hash, 'hex') FROM tx WHERE tx.id = MIN(ma_tx_mint.tx_id)) as initial_mint_tx_hash`),
-			this.knex.raw(`(SELECT array_agg(metadata) FROM asset_metadata) as metadata`),
-		)
-		.from<Asset>('ma_tx_mint')
-		.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
-		.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
-		.innerJoin('block', 'block.id', 'tx.block_id')
-		.whereRaw(whereExpr)
-		.then<Asset>((rows: any[]) => rows[0].policy_id ? rows[0] : null);
+			.select(
+				this.knex.raw(`MIN(encode(asset.policy, 'hex')) as policy_id`),
+				this.knex.raw(`MIN(encode(asset.name, 'hex')) as asset_name`),
+				this.knex.raw(`MIN(asset.fingerprint) as fingerprint`),
+				this.knex.raw(`SUM(ma_tx_mint.quantity) as quantity`),
+				this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (WHERE ma_tx_mint.quantity > 0),0) AS mint_quantity`),
+				this.knex.raw(`COALESCE(SUM(ma_tx_mint.quantity) filter (where ma_tx_mint.quantity < 0), 0) as burn_quantity`),
+				this.knex.raw(`COUNT(ma_tx_mint.tx_id) as mint_transactions`),
+				this.knex.raw(`MIN(block.time) as created_at`),
+				this.knex.raw(`(SELECT encode(tx.hash, 'hex') FROM tx WHERE tx.id = MIN(ma_tx_mint.tx_id)) as initial_mint_tx_hash`),
+				this.knex.raw(`(SELECT array_agg(metadata) FROM asset_metadata) as metadata`),
+			)
+			.from<Asset>('ma_tx_mint')
+			.innerJoin({ asset: 'multi_asset' }, 'asset.id', 'ma_tx_mint.ident')
+			.innerJoin('tx', 'tx.id', 'ma_tx_mint.tx_id')
+			.innerJoin('block', 'block.id', 'tx.block_id')
+			.whereRaw(whereExpr)
+			.then<Asset>((rows: any[]) => rows[0].policy_id ? rows[0] : null);
 		if (asset) {
 			asset.metadata = asset.metadata || [];
 			const original_asset_name = asset.asset_name;
@@ -1288,7 +1328,7 @@ export class PostgresClient implements DbClient {
 				const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, original_asset_name);
 				// build reference asset_name;
 				let metadata = await this.getAssetUtxoMetadata(refenceAsset);
-				asset.metadata.push(...metadata.map(m => ({...m, label: asset_name_label})));
+				asset.metadata.push(...metadata.map(m => ({ ...m, label: asset_name_label })));
 			}
 		}
 		return asset;
@@ -1297,12 +1337,12 @@ export class PostgresClient implements DbClient {
 	async getAssetMetadata(identifier: string): Promise<Metadata[]> {
 		const whereExpr = identifier.startsWith('asset1') ? `asset.fingerprint = '${identifier}'` : `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`;
 		return this.knex.select(
-				this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
+			this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
 		)
-		.from<Asset>('tx_metadata')
-		.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
-		.then((rows: any[]) => rows.map(r => r.metadata));
-		
+			.from<Asset>('tx_metadata')
+			.whereRaw(`tx_metadata.tx_id = (SELECT MAX(tx_metadata.tx_id) FROM ma_tx_mint INNER JOIN "multi_asset" AS "asset" ON "asset"."id" = "ma_tx_mint"."ident" INNER JOIN "tx_metadata" ON "tx_metadata"."tx_id" = "ma_tx_mint"."tx_id" WHERE ${whereExpr})`)
+			.then((rows: any[]) => rows.map(r => r.metadata));
+
 	}
 
 	async getAssetUtxoMetadata(identifier: string): Promise<Metadata[]> {
@@ -1313,14 +1353,14 @@ export class PostgresClient implements DbClient {
 			this.knex.raw(`datum.value as value`),
 			this.knex.raw(`encode(datum.bytes, 'hex') as metadata`)
 		)
-		.from<Asset>({ asset: 'multi_asset' })
-		.innerJoin({ mto: 'ma_tx_out' }, 'mto.ident', 'asset.id')
-		.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
-		.innerJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
-		.whereRaw(whereExpr)
-		.orderByRaw('tx_out.tx_id desc nulls last')
-		.limit(1)
-		.then((rows: any[]) => rows.map(r => Utils.convertDatumToMetadata(r.policy_id, r.asset_name, r.metadata, r.value)))
+			.from<Asset>({ asset: 'multi_asset' })
+			.innerJoin({ mto: 'ma_tx_out' }, 'mto.ident', 'asset.id')
+			.innerJoin('tx_out', 'tx_out.id', 'mto.tx_out_id')
+			.innerJoin('datum', pg => pg.on('datum.hash', 'tx_out.data_hash').orOn('datum.id', 'tx_out.inline_datum_id'))
+			.whereRaw(whereExpr)
+			.orderByRaw('tx_out.tx_id desc nulls last')
+			.limit(1)
+			.then((rows: any[]) => rows.map(r => Utils.convertDatumToMetadata(r.policy_id, r.asset_name, r.metadata, r.value)))
 	}
 
 	/**
