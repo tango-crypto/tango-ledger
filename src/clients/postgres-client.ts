@@ -1556,7 +1556,7 @@ export class PostgresClient implements DbClient {
 			'collateral_percent',
 			'max_collateral_inputs',
 			'epoch.block_id',
-			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(cost_model.hash, 'hex')) || JSONB_BUILD_OBJECT('costs', cost_model.costs) || JSONB_BUILD_OBJECT('block_id', cost_model.block_id)), '{}'::JSONB) as cost_model`)
+			this.knex.raw(`NULLIF(JSONB_STRIP_NULLS(JSONB_BUILD_OBJECT('hash', encode(cost_model.hash, 'hex')) || JSONB_BUILD_OBJECT('costs', cost_model.costs)), '{}'::JSONB) as cost_model`)
 		)
 			.from<EpochParameters>({ epoch: 'epoch_param' })
 			.leftJoin('cost_model', 'cost_model.id', 'epoch.cost_model_id')

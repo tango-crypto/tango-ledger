@@ -91,8 +91,8 @@ describe('assets endpoints', function () {
 
     it('should get asset with utxo metadata', async () => {
         // arrange
-        const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
-        // const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
+        // const identifier = '1ca3e06a46d694c65601bf8a6a64617b6fc8d783f6710db322681007000de1404e465431';
+        const identifier = 'asset1y9mv9sx30etn5a7stp55tek0ra54yp4uccvlld';
 
         // act
         const asset = await client.getAsset(identifier);

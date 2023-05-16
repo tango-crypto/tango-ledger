@@ -4,7 +4,7 @@ import { PostgresClient } from '../src/clients/postgres-client';
 const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
-const db_pwd = 'kraken!';
+// const db_pwd = 'kraken!';
 const db_name = 'testnet_preprod';
 let client: PostgresClient;
 
@@ -166,6 +166,17 @@ describe('transaction endpoints', function () {
         // assert
         expect(metadata).not.null;
     });
+
+    it('should get transtaction tip', async () =>  {
+         // arrange
+         const txHash = '1c8997f9f0debde5b15fe29f0f18839a64e51c19ccdbe89e2811930d777c9b68';
+
+         // act
+         const tx = await client.getTransactionTip(txHash);
+ 
+         // assert
+         expect(tx).not.null;
+    })
 
     after('closing connection', async () => {
         await client.disconnect();

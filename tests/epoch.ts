@@ -4,8 +4,8 @@ import { PostgresClient } from '../src/clients/postgres-client';
 const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
-const db_pwd = 'kraken!';
-const db_name = 'testnet_new';
+// const db_pwd = 'kraken!';
+const db_name = 'testnet_preprod';
 let client: PostgresClient;
 
 describe('epoch endpoints', function () {
@@ -37,7 +37,7 @@ describe('epoch endpoints', function () {
 
     it('should get epoch parameters', async () => {
         // arrange
-        const epoch = 229;
+        const epoch = 52;
 
         // act
         const parameters = await client.getEpochParameters(epoch);
