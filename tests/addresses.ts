@@ -4,7 +4,6 @@ import { PostgresClient } from '../src/clients/postgres-client';
 const db_host = 'localhost';
 const db_port = 5432;
 const db_user = 'leo';
-// const db_pwd = 'kraken!';
 const db_name = 'testnet_preprod';
 let client: PostgresClient;
 

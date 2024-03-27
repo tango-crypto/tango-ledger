@@ -1293,7 +1293,7 @@ export class PostgresClient implements DbClient {
 		// try to extract the asset name to check for CIP68 Standard
 		const { whereExpr, assetName } = identifier.startsWith('asset1') ? { whereExpr: `asset.fingerprint = '${identifier}'`, assetName: '' } : { whereExpr: `asset.policy = decode('${identifier.substring(0, 56)}', 'hex') AND asset.name = decode('${identifier.substring(56)}', 'hex')`, assetName: identifier.substring(56) };
 		const isCIP68 = Utils.isCIP68Standard(assetName);
-		let asset = await this.knex.with('asset_metadata',
+		const asset = await this.knex.with('asset_metadata',
 			this.knex.select(
 				this.knex.raw(`JSONB_BUILD_OBJECT('json',TX_METADATA.JSON) || JSONB_BUILD_OBJECT('label',TX_METADATA.KEY) AS METADATA`),
 			)
@@ -1327,7 +1327,7 @@ export class PostgresClient implements DbClient {
 				asset.asset_name_label = asset_name_label;
 				const refenceAsset = Utils.buildCip68ReferenceAssetName(asset.policy_id, original_asset_name);
 				// build reference asset_name;
-				let metadata = await this.getAssetUtxoMetadata(refenceAsset);
+				const metadata = await this.getAssetUtxoMetadata(refenceAsset);
 				asset.metadata.push(...metadata.map(m => ({ ...m, label: asset_name_label })));
 			}
 		}
@@ -1474,7 +1474,7 @@ export class PostgresClient implements DbClient {
 			.limit(size);
 	}
 
-	async getPolicyAssets(policyId: string, size = 50, order = 'desc', fingerprint: string = ''): Promise<Asset[]> {
+	async getPolicyAssets(policyId: string, size = 50, order = 'desc', fingerprint = ''): Promise<Asset[]> {
 		const seekExpr = fingerprint ? order == 'asc' ? `> '${fingerprint}'` : `< '${fingerprint}'` : '';
 		return this.knex.with('asset', pg =>
 			pg.select(

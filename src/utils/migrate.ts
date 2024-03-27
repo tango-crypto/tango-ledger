@@ -12,11 +12,11 @@
 //     const knex = Knex({
 //         client: 'pg',
 //         connection: {
-//             host: con.host || '54.215.96.227',
+//             host: con.host || '127.0.0.1',
 //             port: con.port || 6543,
 //             database: con.db || 'testnet',
 //             user: con.user || 'cardano',
-//             password: con.password || 'kraken!',
+//             password: con.password || 'pwd',
 //         }
 //     });
  
