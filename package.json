@@ -16,9 +16,6 @@
     "type": "git",
     "url": "git://github.com/tango-crypto/tango-ledger.git"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "keywords": [
     "cardano",
     "ledger",
