@@ -1,5 +1,5 @@
 {
-  "name": "@tango-crypto/tango-ledger",
+  "name": "@tangocrypto/tango-ledger",
   "version": "1.8.2",
   "description": "Javascript access to cardano blockchain data",
   "main": "./dist/index.js",
@@ -15,6 +15,9 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/tango-crypto/tango-ledger.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
   },
   "keywords": [
     "cardano",
