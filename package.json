@@ -1,6 +1,6 @@
 {
   "name": "@tangocrypto/tango-ledger",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "Javascript access to cardano blockchain data",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
