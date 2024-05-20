@@ -1039,7 +1039,7 @@ export class PostgresClient implements DbClient {
 
 	async getStake(stakeAddress: string): Promise<Stake> {
 		return this.knex.select(
-			this.knex.raw('stake_active(sd.id, delegation.tx_id) as active'),
+			this.knex.raw('(case when sd.id is null and delegation.tx_id is not null then true else false end) as active'),
 			'block.epoch_no as active_epoch',
 			this.knex.raw('COALESCE(utxo_view.controlled_total_stake, 0) + COALESCE(reward.rewards_sum, 0) - COALESCE(wd.withdrawals_sum, 0)  as controlled_total_stake'),
 			this.knex.raw('COALESCE(reward.rewards_sum, 0) as rewards_sum'),
