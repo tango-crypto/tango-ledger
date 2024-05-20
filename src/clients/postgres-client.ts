@@ -1168,7 +1168,7 @@ export class PostgresClient implements DbClient {
 			.innerJoin('pool_hash', 'pool_hash.id', 'pu.hash_id')
 			.leftJoin('epoch', 'epoch.no', 'pu.active_epoch_no')
 			.leftJoin({ pmr: 'pool_metadata_ref' }, 'pmr.id', 'pu.meta_id')
-			.leftJoin({ pod: 'pool_offline_data' }, 'pod.pmr_id', 'pmr.id');
+			.leftJoin({ pod: 'off_chain_pool_data' }, 'pod.pmr_id', 'pmr.id');
 		if (!Number.isNaN(Number(poolId))) {
 			query = query
 				.where('pool_hash.id', '=', poolId);
@@ -1200,7 +1200,7 @@ export class PostgresClient implements DbClient {
 			.from<Pool>('pool_hash')
 			.innerJoin({ sl: 'slot_leader' }, 'sl.pool_hash_id', 'pool_hash.id')
 			.leftJoin({ pmd: 'pool_metadata_ref' }, 'pmd.pool_id', 'pool_hash.id')
-			.leftJoin({ pod: 'pool_offline_data' }, 'pod.pool_id', 'pool_hash.id')
+			.leftJoin({ pod: 'off_chain_pool_data' }, 'pod.pool_id', 'pool_hash.id')
 			.where('sl.id', '=', slot_leader_id);
 		return query.then(rows => {
 			if (rows.length == 0) return null;
